@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}">
+    <meta charset="UTF-8" />
+    <title>Video Stream with Line</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='A1.ico') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <p class="second-page-parag">Draw Your Virtual Gate For {{ gate_name }}</p>
+
+    <div class="block_img_btn">
+        <img class="image" id="videoFeed" src="{{ url_for('crowd_video_feed', gate_name=gate_name, url=url) }}" width="700" height="500" />
+        <div class="buttons-container">
+            <button class="button" id="captureButton">Capture</button>
+        </div>
+        <input type="hidden" id="captureValue" value="0"> <!-- Hidden input for capture value -->
+    </div>
+
+    <script>
+        const captureButton = document.getElementById("captureButton");
+        const captureValueInput = document.getElementById("captureValue");
+
+        captureButton.addEventListener("click", () => {
+            captureValueInput.value = "1"; // Set the value to 1 when button is clicked
+        });
+
+        // Send value to Flask when navigating away or refreshing the page
+        window.addEventListener("beforeunload", () => {
+            if (captureValueInput.value === "1") {
+                // Send value to Flask
+                fetch("/crowd_video_feed", {  // Corrected URL for the POST request
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ value: 1 }),
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

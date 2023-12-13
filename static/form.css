@@ -1,0 +1,52 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f0f2f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  width: 400px; /* Increase width */
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  margin-bottom: 10px; /* Increase space between elements */
+  font-weight: 600;
+}
+
+input[type="text"],
+select {
+  padding: 12px; /* Increase input size */
+  margin-bottom: 20px; /* Increase space between elements */
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+/* Existing CSS styles */
+
+button {
+  padding: 12px; /* Increase button size */
+  border: none;
+  border-radius: 6px;
+  background-color: #1877f2;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px; /* Increase space between buttons */
+}
+
+button:hover {
+  background-color: #166fe5;
+}

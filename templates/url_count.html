@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}">
+    <meta charset="UTF-8" />
+    <title>Video Stream with Line</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='A1.ico') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <p class="second-page-parag">Draw Your Virtual Gate For {{ gate_name }}</p>
+
+    <div class="block_img_btn">
+        <img class="image" id="videoFeed" src="{{ url_for('video_feed', gate_name=gate_name, url=url) }}" width="700" height="500" />
+        <div class="buttons-container">
+            <button class="button" id="stopButton">Stop Stream</button>
+            <button class="button" id="startButton">Start Stream</button>
+            <p class="click">Click on the video to get coordinates:</p>
+            <p class="click">Coordinates: <span id="coordinates">X: , Y: </span></p>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById("videoFeed");
+        const coordinatesSpan = document.getElementById("coordinates");
+        let stopped = true;
+        const coordinatesList = []; // List to store coordinates
+
+        function stopStream() {
+            stopped = true;
+            video.src = "";
+        }
+
+        function startStream() {
+            stopped = false;
+            const url = "{{ url_for('video_feed') }}";
+            video.src = url;
+        }
+
+        function sendCoordinatesToFlask() {
+            if (coordinatesList.length > 0) {
+                fetch("/video_feed", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ coordinates: coordinatesList }),
+                })
+                .then(response => {
+                    console.log(response);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        }
+
+        function sendCoordinates(event) {
+            if (!stopped) {
+                const rect = video.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                coordinatesSpan.textContent = `X: ${x}, Y: ${y}`;
+                coordinatesList.push({ x, y }); // Add coordinates to the list
+                sendCoordinatesToFlask(); // Send coordinates to Flask
+            }
+        }
+
+        const stopButton = document.getElementById("stopButton");
+        const startButton = document.getElementById("startButton");
+
+        stopButton.addEventListener("click", stopStream);
+        startButton.addEventListener("click", startStream);
+        video.addEventListener("click", sendCoordinates);
+
+        // Trigger start action on page load
+        window.onload = startStream;
+    </script>
+</body>
+</html>

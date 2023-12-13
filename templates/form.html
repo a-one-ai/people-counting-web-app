@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>people counting</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='form.css') }}">
+</head>
+<body>
+    <form method="post" id="myForm" onsubmit="return validateForm()">
+        <label for="selection">Camera Type:</label>
+        <select name="selection" id="selection">
+            <option value="camera">camera</option>
+            <option value="url">URL</option>
+        </select><br><br>
+
+        <div id="urlInput" style="display:none;">
+            <label for="url">URL:</label>
+            <input type="text" id="url" name="url"><br><br>
+        </div>
+
+        <label for="gate_name">Gate Name:</label>
+        <input type="text" id="gate_name" name="gate_name"><br><br>
+
+        <button type="submit" name="button" value="count">Count</button>
+        <button type="submit" name="button" value="crowd">Crowd</button>
+    </form>
+
+    <script>
+        function validateForm() {
+            var gateName = document.getElementById("gate_name").value;
+            var selection = document.getElementById("selection").value;
+
+            if (selection === "url") {
+                var url = document.getElementById("url").value;
+                if (url.trim() === "") {
+                    alert("Please enter the URL");
+                    return false;
+                }
+            }
+
+            if (gateName.trim() === "") {
+                alert("Please write the gate name");
+                return false;
+            }
+            
+            return true;
+        }
+
+        document.getElementById("selection").addEventListener("change", function() {
+            var selection = this.value;
+            var urlInput = document.getElementById("urlInput");
+            if (selection === "url") {
+                urlInput.style.display = "block";
+            } else {
+                urlInput.style.display = "none";
+            }
+        });
+    </script>
+</body>
+</html>
