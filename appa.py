@@ -1,18 +1,7 @@
 from flask_cors import CORS
 from flask import redirect, url_for
 from flask import Flask, render_template, Response, request, jsonify
-
 import cv2
-
-cv2.setNumThreads(1)  # Set the number of threads for OpenCV
-
-import torch
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-torch.cuda.set_device(0) 
-torch.set_num_threads(1)  # Set the number of threads for PyTorch
-
-
-
 from datetime import datetime 
 # from  crowdDensity import counter
 import numpy as np
@@ -51,18 +40,14 @@ def index():
 
         if selection == 'url' and button == 'count':
             rout = 'url_count'
-            return redirect(url_for(rout, my_gate_name=gate_name, url=url))
         elif selection == 'url' and button == 'crowd':
             rout = 'url_crowd'
-            return redirect(url_for(rout, my_gate_name=gate_name, url=url))
         elif selection == 'camera' and button == 'count':
             rout = 'camera_count'
-            url = ''
-            print("url is ",url)
-            return redirect(url_for(rout, my_gate_name=gate_name))
         elif selection == 'camera' and button == 'crowd':
             rout = 'camera_crowd'
-            return redirect(url_for(rout, my_gate_name=gate_name))
+        
+        return redirect(url_for(rout, my_gate_name=gate_name, url=url))
 
     return render_template('form.html')
 
@@ -83,23 +68,7 @@ def update_coordinates():
     if received_coordinates:
         points = get_coordinates(received_coordinates)
         points = check_points(points)
-        client_id = request.remote_addr  # Get client IP as a unique identifier
-        print("****************************************************************************")
-        print("****************************************************************************")
-        print("*******************************Maggy*********************************************")
-        print("****************************************************************************")
-        print("****************************************************************************")
-        print("****************************************************************************")
-        print("*****************************Mostafa***********************************************")
-        print("****************************************************************************")
-        print("****************************************************************************")
-        print("****************************************************************************")
-        print("******************************Aslam**********************************************")
-        print("****************************************************************************")
-        print("****************************************************************************")
-        print("****************************************************************************")
-        print("****************************************************************************")
-   
+        client_id = request.remote_addr  # Unique client identifier
         print(request.remote_addr)
         if client_id not in video_feeds:
             return jsonify({"error": "Video feed not found for this client"})
@@ -111,7 +80,7 @@ def update_coordinates():
     return jsonify({"error": "Invalid request"})
 
 @app.route('/video_feed', methods=['GET', 'POST'])
-def video_feed(): 
+def video_feed():
     points = request.args.get('points')
     url = request.args.get('url')
     gate_name = request.args.get('gate_name')
@@ -121,10 +90,9 @@ def video_feed():
         video_feeds[client_id] = VideoFeed(url, gate_name, points)
     return Response(video_feeds[client_id].generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-
 @app.route('/release_capture', methods=['POST'])
 def release_capture():
-    client_id = request.headers.get('X-Forwarded-For') or request.headers.get('X-Real-IP')  # Unique client identifier
+    client_id = request.remote_addr  # Unique client identifier
     if client_id in video_feeds:
         video_feeds[client_id].release_capture()
         del video_feeds[client_id]  # Remove the video feed for the client
@@ -132,49 +100,98 @@ def release_capture():
     return jsonify({"error": "Video feed not found for this client"})
 
 
-user_dict = {}  # Dictionary to store user instances
 
-@app.route('/camera_count')
-def camera_count():
-    gate_name = request.args.get('my_gate_name')
-    return render_template('camera_count.html', gateNameInput=gate_name)
 
-@app.route('/process_frame', methods=['POST'])
-def process_received_frame():
-    if request.method == 'POST':
-        frame_data = request.json['frame']
-        client_id = request.remote_addr  # Get client IP as a unique identifier
-        
-        if client_id not in user_dict:
-            user_dict[client_id] = User(client_id)
-        
-        user = user_dict[client_id]
-        processed_data = user.process_frame(frame_data)
-        print("All good")
 
-        return jsonify({'processed_frame': processed_data})
 
-@app.route('/mouse_event', methods=['POST'])
-def handle_mouse_event():
-    if request.method == 'POST':
-        data = request.json
-        x = int(data.get('x'))
-        y = int(data.get('y'))
 
-        client_id = request.remote_addr  # Get client IP as a unique identifier
-        
-        if client_id not in user_dict:
-            user_dict[client_id] = User(client_id)
-        
-        user = user_dict[client_id]
-        user.points.append((x, y))
-        user.points = check_points(user.points)
-        print('Points received:', user.points)
 
-        return jsonify({'message': 'Coordinates received successfully'})
 
+
+
+
+# @app.route('/url_crowd')
+# def url_crowd():
+#     url = request.args.get('url')
+#     gate_name = request.args.get('gate_name')
+#     print(gate_name)
+#     return render_template('url_crowd.html', gate_name=gate_name, url=url)
+
+
+# value = 0
+# @app.route('/crowd_video_feed', methods=['GET', 'POST'])
+# def crowd_video_feed():
+#     global value
+
+#     if request.method == 'POST':
+#         data = request.json
+#         value = data.get('value')
+#         print(value)
+#         return "Coordinates received successfully"
+
+#     url = request.args.get('url')
+#     gate_name = request.args.get('gate_name')
+
+#     def crowd_url(url):
+#         count = 0
+#         video_capture = cv2.VideoCapture(url)
+#         while True:
+#             success, frame = video_capture.read()
+#             if not success:
+#                 break
+#             else:
+#                 frame = cv2.resize(frame, (700, 500))
+#                 print(value)
+#                 if value == 1:
+#                     print("Button pressed")
+#                     count, img = count_humans(frame)
+
+#                     _, encoded_image_data = cv2.imencode('.jpg', img)
+#                     encoded_image_data = base64.b64encode(encoded_image_data).decode('utf-8')
+#                     yield jsonify({'image_data': encoded_image_data})  # Yield processed data
+                
+#                 _, encoded_frame = cv2.imencode('.jpg', frame)
+#                 frame_bytes = encoded_frame.tobytes()
+#                 yield (b'--frame\r\n'
+#                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+#         video_capture.release()
+
+#     return Response(crowd_url(url), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+# @app.route('/crowd_video_feed')
+# # Function that returns a response object for video streaming using generate_frames function
+# def crowd_video_feed():
+#     with app.app_context():
+#         url = request.args.get('url')
+#         gate_name = request.args.get('gate_name')
+#         print(gate_name)
+#         return Response(crowd_url(url), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+# @app.route('/temp3')
+# def temp3():
+#     gate_name = request.args.get('my_gate_name')
+#     return render_template('temp3.html', gate_name=gate_name)
+
+# @app.route('/temp4')
+# def temp4():
+#     gate_name = request.args.get('my_gate_name')
+#     return render_template('temp4.html', gate_name=gate_name)
+
+
+# # Function that returns a response object for video streaming using generate_frames function
+# @app.route('/video_feed')
+# def video_feed():
+#     gate_name = 'get_gate_name()'
+#     return Response(generate_frames(gate_name), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == '__main__':
-    app.run(debug=True ,host="0.0.0.0", port=6001)
+    app.run(debug=True,host='0.0.0.0',port=5000)
+
+
+
+
+
+
 

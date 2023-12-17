@@ -1,4 +1,6 @@
 import cv2
+cv2.setNumThreads(1)  # Set the number of threads for OpenCV
+
 from ultralytics import YOLO
 import math
 import numpy as np
@@ -13,6 +15,12 @@ import time
 import pyrebase
 import base64
 from flask import jsonify
+import threading
+import torch
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+torch.cuda.set_device(0) 
+torch.set_num_threads(1)  # Set the number of threads for PyTorch
+
 tracker = Tracker()
 
 
@@ -98,12 +106,16 @@ def stream(url):
 
 # Function to draw a line on the video frame
 def draw_line(frame,points,up,down,counted_id,in_line):
+    
     offset =  6
     results = count_model.predict(frame)
     a = results[0].boxes.data
-    px = pd.DataFrame(a).astype("float")
+    a_gpu = torch.tensor(a).to("cuda:0") # Move to GPU
+    px_gpu = pd.DataFrame(a_gpu.cpu().numpy()).astype("float") # Convert to NumPy on CPU
+
+
     list = []
-    for index, row in px.iterrows():
+    for index, row in px_gpu.iterrows():
         x1 = int(row[0])
         y1 = int(row[1])
         x2 = int(row[2])
@@ -181,31 +193,156 @@ def get_coordinates(points, list=None):
     
     return list
 
-# #generate_frames for crowd people
-# def crowd_url(url,button=0):
-#     count = 0
-#     video_capture = cv2.VideoCapture(url) 
-#     while True:
-#         success, frame = video_capture.read()
-#         if not success:
-#             break
-#         else:
-#             frame = cv2.resize(frame, (700, 500))
-#             if button == 1:
-#                 print("here is button")
-#                 count, img = count_humans(frame)
+#generate_frames for crowd people
+def crowd_url(url):
+    count = 0
+    video_capture = cv2.VideoCapture(url) 
+    while True:
+        success, frame = video_capture.read()
+        if not success:
+            break
+        else:
+            frame = cv2.resize(frame, (700, 500))
+            # if button == 1:
+            #     print("here is button")
+            #     count, img = count_humans(frame)
 
-#                 _, encoded_image_data = cv2.imencode('.jpg', img)
-#                 encoded_image_data = base64.b64encode(encoded_image_data).decode('utf-8')
-#                 load_data_firebase("crowd", img, count)
-#                 # Send back the processed image data
-#                 return jsonify({'image_data': encoded_image_data})
+            #     _, encoded_image_data = cv2.imencode('.jpg', img)
+            #     encoded_image_data = base64.b64encode(encoded_image_data).decode('utf-8')
+            #     load_data_firebase("crowd", img, count)
+            #     # Send back the processed image data
+            #     return jsonify({'image_data': encoded_image_data})
     
-#             _, encoded_frame = cv2.imencode('.jpg', frame)
-#             frame_bytes = encoded_frame.tobytes()      
-#             yield (b'--frame\r\n'
-#                    b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-#     video_capture.release()
+            _, encoded_frame = cv2.imencode('.jpg', frame)
+            frame_bytes = encoded_frame.tobytes()      
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+    video_capture.release()
 
 
 
+class VideoFeed:
+    def __init__(self, camera_type, gate_name, points):
+        self.camera_type = camera_type
+        self.gate_name = gate_name
+        self.points = points
+        self.points_lock = threading.Lock()
+        self.video_capture = cv2.VideoCapture(self.camera_type)
+        self.in_line = []
+        self.up = 0
+        self.down = 0
+        self.wait = 0
+        self.total = self.down - self.up
+        self.counted_id = []
+        self.start_time = time.time()
+
+    def update_points(self, new_points):
+        with self.points_lock:
+            self.points = new_points
+ 
+    def generate_frames(self):
+        up =0
+        down = 0
+        counted_id=[]
+        in_line = []
+        while True:
+            success, frame = self.video_capture.read()
+            with self.points_lock:
+                points = self.points  # Get the points
+            if not success:
+                break
+            print('thepointis',points)
+            frame = cv2.resize(frame, (700, 500))
+            # Your frame processing logic using updated points...
+            frame, up, down, counted_id, in_line = draw_line(frame, points, up, down, counted_id, in_line)
+
+            _, encoded_frame = cv2.imencode('.jpg', frame)
+            frame_bytes = encoded_frame.tobytes()
+            current_time = time.time()
+
+            elapsed_time = current_time - self.start_time
+            if elapsed_time >= 300:
+                self.start_time = time.time()
+                # Your other logic...
+
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+    def release_capture(self):
+        self.video_capture.release()
+
+# class CauntCamera:
+#     def __init__(self, camera_type, gate_name, points,frame):
+#         self.camera_type = camera_type
+#         self.gate_name = gate_name
+#         self.points = points
+#         self.points_lock = threading.Lock()
+#         self.in_line = []
+#         self.up = 0
+#         self.down = 0
+#         self.wait = 0
+#         self.total = self.down - self.up
+#         self.counted_id = []
+#         self.start_time = time.time()
+#         self.frame = frame
+#     def update_points(self, new_points):
+#         with self.points_lock:
+#             self.points = new_points
+#     def frames(self, new_frame):
+#         with self.points_lock:
+#             self.frame = new_frame
+    
+#     def process_frame(self, frame,up,down,counted_id, in_line):
+#         # Convert base64 string to numpy array
+#         encoded_data = frame.split(',')[1]  # Remove header from base64 data
+#         nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
+#         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+#         frame = cv2.resize(frame, (640, 480))
+
+#         # Create a copy of the frame for processing
+#         # processed_frame = frame.copy()
+
+#         # Example: Drawing a line on the frame
+#         processed_frame,up,down,counted_id,in_line = draw_line(frame,points,up,down,counted_id,in_line)
+#         print("good")
+#         # Convert processed frame back to base64 string
+#         _, encoded_frame = cv2.imencode('.jpg', processed_frame)
+#         processed_frame_data = base64.b64encode(encoded_frame).decode('utf-8')
+#         return processed_frame_data
+
+def generate_and_increment():
+    # Initialize a counter if it doesn't exist
+    if 'counter' not in generate_and_increment.__dict__:
+        generate_and_increment.counter = 0
+    # Generate the current number
+    current_number = generate_and_increment.counter
+    # Increment the counter for the next call
+    generate_and_increment.counter += 1
+    return current_number
+
+class User:
+    def __init__(self, ip_address):
+        self.ip_address = ip_address
+        self.points = []  # Initialize points for each user
+
+    def process_frame(self, frame_data):
+        # Process frame received from the frontend for this user
+        # Adjust this logic based on your requirements
+        encoded_data = frame_data.split(',')[1]
+        nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        width = 640
+        height = 480
+        frame = cv2.resize(frame, (width, height))
+        up = 0
+        down = 0
+        counted_id = []
+        in_line = []
+
+        processed_frame, up, down, counted_id, in_line = draw_line(frame, self.points, up, down, counted_id, in_line)
+        print("Good")
+        
+        _, encoded_frame = cv2.imencode('.jpg', processed_frame)
+        processed_frame_data = base64.b64encode(encoded_frame).decode('utf-8')
+        return processed_frame_data

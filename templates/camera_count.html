@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Video</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='Home.css') }}"
+
+    />
+</head>
+<body>
+    <p class="second-page-parag">Draw Your Virtual Gate For {{gateNameInput}}</p>
+    <script>
+        // Log the gateNameInput value to the console for debugging
+        console.log("gateNameInput:", "{{ gateNameInput }}");
+    </script>
+    
+    <!-- <p>Coordinates: <span id="clickedPoint"></span></p> -->
+    <!-- <canvas id="outputCanvas" width="640" height="480"></canvas> -->
+    <!-- <button onclick="startVideo()">Start Video</button> -->
+
+
+    <div class="block_img_btn">  
+    <canvas id="outputCanvas" width="700" height="500"></canvas>
+
+      <div class="buttons-container">
+        <button class="button" id="stopButton">Stop Stream</button>
+        <button class="button" id="startButton">Start Stream</button>
+        <p class ="click">Click on the video to get coordinates:</p>
+        <p class = "click">Coordinates: <span id="clickedPoint"></span>
+      </div></div>
+    
+
+
+
+
+      <script>
+        let video = document.createElement('video'); // Create video element
+        document.body.appendChild(video); // Append video element to the body
+        video.hidden = true; // Hide video element
+
+        let inputCanvas = document.createElement('canvas'); // Create input canvas element
+        document.body.appendChild(inputCanvas); // Append input canvas element to the body
+        inputCanvas.style.display = 'none'; // Hide input canvas element
+
+        let outputCanvas = document.getElementById('outputCanvas');
+        let outputContext = outputCanvas.getContext('2d');
+        let sendInterval = 200; // Send frames every 200ms for ~5fps
+        let stopped = false;
+
+        function startStream() {
+            startVideo()
+                .then(() => {
+                    setInterval(function () {
+                        if (stopped) {
+                            return; // If stopped, don't capture frames
+                        }
+
+                        // Capture frame from the video element
+                        inputCanvas.width = video.videoWidth;
+                        inputCanvas.height = video.videoHeight;
+                        let inputContext = inputCanvas.getContext('2d');
+                        inputContext.drawImage(video, 0, 0, inputCanvas.width, inputCanvas.height);
+                        let imgData = inputCanvas.toDataURL('image/jpeg');
+
+                        // Send the captured frame to Flask backend
+                        fetch('/process_frame', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ frame: imgData })
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                // Process the response (if any)
+                                if (data && data.processed_frame) {
+                                    let processedImage = new Image();
+                                    processedImage.onload = function () {
+                                        outputContext.drawImage(processedImage, 0, 0, 640, 480);
+                                    };
+                                    processedImage.src = 'data:image/jpeg;base64,' + data.processed_frame; // Set source here
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                            });
+                    }, sendInterval); // Adjust the interval as needed for desired fps
+                })
+                .catch(error => {
+                    console.error('Error starting video:', error);
+                });
+        }
+
+        function startVideo() {
+            return new Promise((resolve, reject) => {
+                if (navigator.mediaDevices.getUserMedia) {
+                    navigator.mediaDevices.getUserMedia({ video: true })
+                        .then(function (stream) {
+                            video.srcObject = stream;
+                            video.play(); // Start playing the video
+                            resolve();
+                        })
+                        .catch(function (error) {
+                            reject(error);
+                        });
+                } else {
+                    reject(new Error('getUserMedia is not supported in this browser.'));
+                }
+            });
+        }
+
+        function stopStream() {
+            stopped = true;
+            let tracks = video.srcObject.getTracks();
+
+            tracks.forEach(track => track.stop()); // Stop all tracks
+            video.srcObject = null;
+            outputContext.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+        }
+
+        document.getElementById('startButton').addEventListener('click', startStream);
+        document.getElementById('stopButton').addEventListener('click', stopStream);
+
+        let clickedPointDisplay = document.getElementById('clickedPoint');
+        outputCanvas.addEventListener('mousedown', function (event) {
+            if (stopped) {
+                return; // If stopped, don't handle mouse event
+            }
+
+            let rect = outputCanvas.getBoundingClientRect();
+            let x = event.clientX - rect.left;
+            let y = event.clientY - rect.top;
+
+            // Display clicked coordinates
+            clickedPointDisplay.textContent = `X: ${x}, Y: ${y}`;
+
+            // Send the coordinates to Flask backend
+            fetch('/mouse_event', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ x: x, y: y })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // Handle response from Flask (if needed)
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+    </script>
+</body>
+</html>

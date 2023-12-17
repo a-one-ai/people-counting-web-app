@@ -1,46 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}">
-    <meta charset="UTF-8" />
-    <title>Video Stream with Line</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='A1.ico') }}">
+    <title>Image Processing</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
+
 </head>
 <body>
-    <p class="second-page-parag">Draw Your Virtual Gate For {{ gate_name }}</p>
-
     <div class="block_img_btn">
         <img class="image" id="videoFeed" src="{{ url_for('crowd_video_feed', gate_name=gate_name, url=url) }}" width="700" height="500" />
         <div class="buttons-container">
-            <button class="button" id="captureButton">Capture</button>
+            <button class="button" id="captureButton">Process Image</button>
         </div>
-        <input type="hidden" id="captureValue" value="0"> <!-- Hidden input for capture value -->
+    </div>
+
+    <div>
+        <img class="received-image" id="receivedImage" width="700" height="500" style="display: none;" />
     </div>
 
     <script>
         const captureButton = document.getElementById("captureButton");
-        const captureValueInput = document.getElementById("captureValue");
 
         captureButton.addEventListener("click", () => {
-            captureValueInput.value = "1"; // Set the value to 1 when button is clicked
-        });
+            const videoFeed = document.getElementById("videoFeed");
 
-        // Send value to Flask when navigating away or refreshing the page
-        window.addEventListener("beforeunload", () => {
-            if (captureValueInput.value === "1") {
-                // Send value to Flask
-                fetch("/crowd_video_feed", {  // Corrected URL for the POST request
+            // Use html2canvas to capture the specified area
+            html2canvas(videoFeed).then(canvas => {
+                // Get the captured image as a base64 data URL
+                const capturedFrame = canvas.toDataURL('image/jpeg');
+
+                // Send the captured frame to Flask for processing
+                fetch("/process_image", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ value: 1 }),
+                    body: JSON.stringify({ captured_frame: capturedFrame }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Response from Flask:", data);
+                    // Display the received image
+                    const receivedImage = document.getElementById("receivedImage");
+                    receivedImage.src = `data:image/jpeg;base64,${data.processed_frame}`;
+                    receivedImage.style.display = "block";
                 })
                 .catch(error => {
                     console.error('Error:', error);
                 });
-            }
+            });
         });
     </script>
 </body>
