@@ -1,0 +1,14 @@
+flask
+flask_cors
+opencv-python
+torch
+ultralytics
+pytube
+numpy
+streamlink
+pandas
+tracker
+cvzone
+datetime
+pyrebase
+threading

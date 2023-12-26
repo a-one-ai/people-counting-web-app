@@ -1,47 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='Home.css') }}"
+    />
     <meta charset="UTF-8" />
     <title>Video Stream with Line</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='A1.ico') }}">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-</head>
-<body>
-    <p class="second-page-parag">Draw Your Virtual Gate For {{ gate_name }}</p>
+    <link
+      rel="shortcut icon"
+      href="{{ url_for('static', filename='B.ico') }}"
+    />
+    <!-- <style>
+        .image {
+          height: 500px; /* default size for larger screens */
+          max-width: 1000px;
+        }
+        .fourth-page-canvas {
+            height: 500px; /* default size for larger screens */
+            max-width: 1000px;
+          }
+      
+        @media screen and (max-width: 767px) {
+          /* Adjust size for screens up to 767px wide (typically mobile phones) */
+          .image {
+            height: 150px;
+            width: 350px;
+          }
+          .fourth-page-canvas{
+            height: 150px;
+            width: 350px;
 
-    <div class="block_img_btn">
-        <img class="image" id="videoFeed" src="{{ url_for('crowd_video_feed', gate_name=gate_name, url=url) }}" width="700" height="500" />
-        <div class="buttons-container">
-            <button class="button" id="captureButton">Capture</button>
-        </div>
-        <input type="hidden" id="captureValue" value="0"> <!-- Hidden input for capture value -->
+          }
+        }
+      </style> -->
+  </head>
+  <body>
+    <div class="container_fourth">
+      <div class="rectangle">
+        <p class="fourth-page-parag">
+          Capture To Start Counting For {{ gate_name }}
+        </p>
+      </div>
     </div>
 
+    <div class="vid-container">
+      <img
+        class="image"
+        id="videoFeed"
+        src="{{ url_for('crowd_video_feed', url=url,ip=ip) }}"
+        width="600"
+        height="500"
+      />
+
+      <span></span>
+      <canvas
+        id="canvas"
+        width="550"
+        height="500"
+        style="display: none"
+        class="fourth-page-canvas"
+      ></canvas>
+      <div id="captured-image-container"></div>
+    </div>
+
+    <button id="capture-btn" class="button_fourth">Capture</button>
+
     <script>
-        const captureButton = document.getElementById("captureButton");
-        const captureValueInput = document.getElementById("captureValue");
+      const canvas = document.getElementById("canvas");
+      const captureButton = document.getElementById("capture-btn");
+      const capturedImageContainer = document.getElementById(
+        "captured-image-container"
+      );
+      const ip = "{{ ip }}";
 
-        captureButton.addEventListener("click", () => {
-            captureValueInput.value = "1"; // Set the value to 1 when button is clicked
-        });
+      captureButton.addEventListener("click", function () {
+        sendCaptureSignal(1, ip);
+      });
 
-        // Send value to Flask when navigating away or refreshing the page
-        window.addEventListener("beforeunload", () => {
-            if (captureValueInput.value === "1") {
-                // Send value to Flask
-                fetch("/crowd_video_feed", {  // Corrected URL for the POST request
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ value: 1 }),
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
+      function sendCaptureSignal(value, ip) {
+        fetch("/capture_signal", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ value: value, ip: ip }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.image) {
+              const receivedImageData = data.image;
+              const decodedImageData = atob(receivedImageData);
+              const imgElement = new Image();
+              const blob = new Blob(
+                [
+                  new Uint8Array(
+                    decodedImageData.split("").map((char) => char.charCodeAt(0))
+                  ),
+                ],
+                { type: "image/jpeg" }
+              );
+              imgElement.src = URL.createObjectURL(blob);
+              capturedImageContainer.innerHTML = "";
+              capturedImageContainer.appendChild(imgElement);
             }
-        });
+          })
+          .catch((error) => {
+            console.error("Error sending capture signal:", error);
+          });
+      }
     </script>
-</body>
+  </body>
 </html>

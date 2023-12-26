@@ -1,17 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}">
     <meta charset="UTF-8" />
     <title>Video Stream with Line</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='A1.ico') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='B.ico') }}">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    
+
+
+
+
 </head>
 <body>
-    <p class="second-page-parag">Draw Your Virtual Gate For {{ gate_name }}</p>
+    <div class = "rectangle">
 
+    <p class="second-page-parag">Draw Your Virtual Gate For {{ gate_name }}</p>
+    </div>
     <div class="block_img_btn">
-        <img class="image" id="videoFeed" src="{{ url_for('video_feed', gate_name=gate_name, url=url) }}" width="700" height="500" />
+        <img class="image" id="videoFeed" src="{{ url_for('video_feed', gate_name=gate_name, url=url, points=points, ip=ip) }}" width="700" height="500" />
         <div class="buttons-container">
             <button class="button" id="stopButton">Stop Stream</button>
             <button class="button" id="startButton">Start Stream</button>
@@ -19,42 +28,46 @@
             <p class="click">Coordinates: <span id="coordinates">X: , Y: </span></p>
         </div>
     </div>
-
+    
     <script>
         const video = document.getElementById("videoFeed");
         const coordinatesSpan = document.getElementById("coordinates");
         let stopped = true;
-        const coordinatesList = []; // List to store coordinates
-
+        let coordinatesList = []; // List to store coordinates
+        const ip = "{{ ip }}";
         function stopStream() {
             stopped = true;
             video.src = "";
         }
-
-        function startStream() {
+    
+        function startStream(points) {
             stopped = false;
-            const url = "{{ url_for('video_feed') }}";
+            const url = `{{ url_for('video_feed', gate_name=gate_name, url=url, points='') }}${points ? `&points=${points}` : ''}&ip=${ip}`;
             video.src = url;
         }
 
         function sendCoordinatesToFlask() {
-            if (coordinatesList.length > 0) {
-                fetch("/video_feed", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ coordinates: coordinatesList }),
-                })
-                .then(response => {
-                    console.log(response);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            }
-        }
+        if (coordinatesList.length > 0) {
 
+            fetch(`/update_coordinates?gate_name={{ gate_name }}&ip=${ip}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ coordinates: coordinatesList, ip: ip }), // Include coordinates and ip in the payload
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.points);
+                startStream(data.points); // Start the stream with updated coordinates
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    }
+
+    
         function sendCoordinates(event) {
             if (!stopped) {
                 const rect = video.getBoundingClientRect();
@@ -65,16 +78,34 @@
                 sendCoordinatesToFlask(); // Send coordinates to Flask
             }
         }
-
+    
         const stopButton = document.getElementById("stopButton");
         const startButton = document.getElementById("startButton");
-
+    
         stopButton.addEventListener("click", stopStream);
-        startButton.addEventListener("click", startStream);
+        startButton.addEventListener("click", () => startStream(''));
         video.addEventListener("click", sendCoordinates);
-
+    
         // Trigger start action on page load
-        window.onload = startStream;
+        window.onload = () => startStream('');
+
+        // Release capture when leaving the page
+        window.addEventListener('beforeunload', function() {
+            fetch('/release_capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Capture released:', data);
+            })
+            .catch(error => {
+                console.error('Error releasing capture:', error);
+            });
+        });
     </script>
 </body>
 </html>

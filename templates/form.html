@@ -1,59 +1,99 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>people counting</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='form.css') }}">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='form.css') }}"
+    />
+    <link
+      rel="shortcut icon"
+      href="{{ url_for('static', filename='B.ico') }}"
+    />
+  </head>
+
+  <body>
     <form method="post" id="myForm" onsubmit="return validateForm()">
+      <div class="rectangle">
+        <p class="title">People Counting</p>
+        <img src="static\A.ico" style="height: 100%; width: 10%" />
+      </div>
+<div class="layout_1">
+      <div class="det">
+      <details class="details">
+        <summary>More Info!</summary>
+        <p>Welcome to our website! </p>
+
+        <p>Here's how to get started:</p>
+
+        <ol>
+          <li>Choose the camera type wether it 's a camera or URL</li>
+          <li>Write the name of your gate</li>
+          <li>
+            Press "Gate" to see your live feed and draw the virtual line , or
+            Press "Crowd" to capture screens from a live feed and count the
+            people in the frame
+          </li>
+        </ol>
+        <p>**Note: Enter Your Data In English**</p>
+      </details>
+    </div>
+      <div class="login-box">
         <label for="selection">Camera Type:</label>
         <select name="selection" id="selection">
-            <option value="camera">camera</option>
-            <option value="url">URL</option>
-        </select><br><br>
+          <option class="dropdownContainer" value="camera">camera</option>
+          <option class="dropdownContainer" value="url">URL</option></select
+        ><br /><br />
 
-        <div id="urlInput" style="display:none;">
-            <label for="url">URL:</label>
-            <input type="text" id="url" name="url"><br><br>
+        <div id="urlInput" style="display: none">
+          <label for="url">URL:</label>
+          <input type="text" id="url" name="url" /><br /><br />
         </div>
 
         <label for="gate_name">Gate Name:</label>
-        <input type="text" id="gate_name" name="gate_name"><br><br>
+        <input type="text" id="gate_name" name="gate_name" /><br /><br />
 
-        <button type="submit" name="button" value="count">Count</button>
+        <button type="submit" name="button" value="count">Gate</button>
         <button type="submit" name="button" value="crowd">Crowd</button>
+        <!-- Added "Crowd" button -->
+      </div>
+    </div>
     </form>
 
     <script>
-        function validateForm() {
-            var gateName = document.getElementById("gate_name").value;
-            var selection = document.getElementById("selection").value;
+      function validateForm() {
+        var gateName = document.getElementById("gate_name").value;
+        var selection = document.getElementById("selection").value;
 
-            if (selection === "url") {
-                var url = document.getElementById("url").value;
-                if (url.trim() === "") {
-                    alert("Please enter the URL");
-                    return false;
-                }
-            }
-
-            if (gateName.trim() === "") {
-                alert("Please write the gate name");
-                return false;
-            }
-            
-            return true;
+        if (selection === "url") {
+          var url = document.getElementById("url").value;
+          if (url.trim() === "") {
+            alert("Please enter the URL");
+            return false;
+          }
         }
 
-        document.getElementById("selection").addEventListener("change", function() {
-            var selection = this.value;
-            var urlInput = document.getElementById("urlInput");
-            if (selection === "url") {
-                urlInput.style.display = "block";
-            } else {
-                urlInput.style.display = "none";
-            }
+        if (gateName.trim() === "") {
+          alert("Please write the gate name");
+          return false;
+        }
+
+        return true;
+      }
+
+      document
+        .getElementById("selection")
+        .addEventListener("change", function () {
+          var selection = this.value;
+          var urlInput = document.getElementById("urlInput");
+          if (selection === "url") {
+            urlInput.style.display = "block";
+          } else {
+            urlInput.style.display = "none";
+          }
         });
     </script>
-</body>
+  </body>
 </html>
