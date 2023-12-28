@@ -12,7 +12,7 @@ from tracker import Tracker
 import cvzone
 from datetime import datetime 
 import time
-import pyrebase
+#import pyrebase
 import base64
 from flask import jsonify
 import threading
@@ -27,25 +27,25 @@ tracker = Tracker()
 
 
 # Add firebase configuration to connect firebase and upload data in it
-firebaseConfig = {
-  "apiKey": "AIzaSyDWvrfySM8YXYa6AWvmglGfQwgeccaf7WQ",
-  "authDomain": "camera-c-97e7e.firebaseapp.com",
-  "databaseURL": "https://camera-c-97e7e-default-rtdb.firebaseio.com",
-  "projectId": "camera-c-97e7e",
-  "storageBucket": "camera-c-97e7e.appspot.com",
-  "messagingSenderId": "150541285688",
-  "appId": "1:150541285688:web:56a9be67cf0d1fa80169cd",
-  "measurementId": "G-KTFCLTGHT1"
-}
+#firebaseConfig = {
+#  "apiKey": "AIzaSyDWvrfySM8YXYa6AWvmglGfQwgeccaf7WQ",
+#  "authDomain": "camera-c-97e7e.firebaseapp.com",
+#  "databaseURL": "https://camera-c-97e7e-default-rtdb.firebaseio.com",
+#  "projectId": "camera-c-97e7e",
+#  "storageBucket": "camera-c-97e7e.appspot.com",
+#  "messagingSenderId": "150541285688",
+#  "appId": "1:150541285688:web:56a9be67cf0d1fa80169cd",
+#  "measurementId": "G-KTFCLTGHT1"
+#}
 # Intilaize firebase with the provided configuration (firebaseConfig)
 
-firebase = pyrebase.initialize_app(firebaseConfig)
+#firebase = pyrebase.initialize_app(firebaseConfig)
 # Access firebase storage service
 
-storage = firebase.storage()
+#storage = firebase.storage()
 # Access firebase realtime database service
 
-db = firebase.database()
+#db = firebase.database()
 
 
 #Loading crowd model
@@ -97,7 +97,7 @@ def count_humans(frame) :
 def youtube(url):
     try:
         yt = YouTube(url)
-        stream = yt.streams.filter(file_extension="mp4",res="480p").first()
+        stream = yt.streams.filter(file_extension="mp4",res="1080p").first()
         video_url = stream.url
         return  video_url
     except:
@@ -111,6 +111,43 @@ def stream(url):
         return best_stream.url
     except:
         return "url error"
+
+def orientation(p, q, r):
+    val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
+    if val == 0:
+        return 0  # Collinear
+    return 1 if val > 0 else 2  # Clockwise or counterclockwise
+
+
+def on_segment(p, q, r):
+    if (
+        q[0] <= max(p[0], r[0])
+        and q[0] >= min(p[0], r[0])
+        and q[1] <= max(p[1], r[1])
+        and q[1] >= min(p[1], r[1])
+    ):
+        return True
+    return False
+
+
+# Function to determine if two line segments intersect
+def intersects(point1, point2, point3, point4):
+
+    o1 = orientation(point1, point2, point3)
+    o2 = orientation(point1, point2, point4)
+    o3 = orientation(point3, point4, point1)
+    o4 = orientation(point3, point4, point2)
+
+    if (
+        o1 != o2
+        and o3 != o4
+        or (o1 == 0 and on_segment(point1, point3, point2))
+        or (o2 == 0 and on_segment(point1, point4, point2))
+        or (o3 == 0 and on_segment(point3, point1, point4))
+        or (o4 == 0 and on_segment(point3, point2, point4))
+    ):
+        return True  # Intersects
+    return False  # Doesn't intersect
 
 # Function to draw a line on the video frame
 def draw_line(frame,points,up,down,counted_id,in_line):
@@ -142,12 +179,14 @@ def draw_line(frame,points,up,down,counted_id,in_line):
     #box axis and id
         x3, y3, x4, y4, id = bbox
         cx = (x3 + x4) // 2
-        cy = (y3 + y4) // 2
+        cy = y3
         # drow circle in the center of the box
         cv2.circle(frame, (cx, cy), 4, (255, 0, 255), -1)
         # if the center point in the line
-        if len(points) == 2: 
-            if points[0][1] <(y3 + offset ) and points[0][1] >(y3-offset):
+        if len(points) == 2:
+            bbox_intersects_line = intersects(points[0], points[1], (x3, y3), (x4, y4))
+ 
+            if bbox_intersects_line:
                 cv2.rectangle(frame,(x3,y3),(x4,y4),(0,0,255))
                 cvzone.putTextRect(frame,f'{id}',(x3,y3),1,2)
                 # check if it calulated or not
@@ -158,23 +197,27 @@ def draw_line(frame,points,up,down,counted_id,in_line):
                 # if the point go across the line and not counted 
                 if id not in counted_id and id in in_line:
                     # if the point above line 
-                    if  y3>(points[0][1] + offset+6):
+                    on_left_side = orientation(points[0], points[1], (x3, y3)) == 1
+
+                    if  on_left_side:
                         up= up+1
                         in_line.remove(id)
                         counted_id.append(id)
                     # if the point under line
-                    elif y3 <(points[0][1]-offset-6):
+                    on_right_side = orientation(points[0], points[1], (x3, y3)) == 2
+
+                    if on_right_side:
                         down = down+1
                         in_line.remove(id)
                         counted_id.append(id)
-            cv2.line(frame, points[0],points[1], 100,4)        
-            print('line done------------------------') 
+            cv2.line(frame, points[0],points[1],100,4)
+            print('line done------------------------')
    # Draw  2 text boxes for people passes line if there is in , out
     # Draw text box for total in&out people        
-    cvzone.putTextRect(frame,f'Out{up}',(50,60),2,2)
-    cvzone.putTextRect(frame,f'In{down}',(50,130),2,2)
-    total = up-down
-    cvzone.putTextRect(frame,f'Total{total}',(50,200),2,2)
+    cvzone.putTextRect(frame,f'Out: {up}',(50,60),2,2, colorR=(0, 0, 255))
+    cvzone.putTextRect(frame,f'In: {down}',(50,130),2,2, colorR=(0, 0, 255))
+    total = down-up
+    cvzone.putTextRect(frame,f'Total: {total}',(50,200),2,2, colorR=(0, 0, 255))
     return frame,up,down,counted_id,in_line
 
 # funciton that check 
