@@ -16,11 +16,11 @@ import time
 import base64
 from flask import jsonify
 import threading
-import torch
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-torch.cuda.set_device(0) 
+# import torch
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# torch.cuda.set_device(0) 
 #num_cpu_cores = torch.multiprocessing.cpu_count()
-torch.set_num_threads(4)  # Set the number of threads for PyTorch
+# torch.set_num_threads(4)  # Set the number of threads for PyTorch
 
 
 tracker = Tracker()
@@ -97,7 +97,7 @@ def count_humans(frame) :
 def youtube(url):
     try:
         yt = YouTube(url)
-        stream = yt.streams.filter(file_extension="mp4",res="1080p").first()
+        stream = yt.streams.filter(res="720p").first()
         video_url = stream.url
         return  video_url
     except:
@@ -152,16 +152,15 @@ def intersects(point1, point2, point3, point4):
 # Function to draw a line on the video frame
 def draw_line(frame,points,up,down,counted_id,in_line):
     
-    offset =  6
     results = count_model.predict(frame) 
     a = results[0].boxes.data
-    try:
-        a_gpu = torch.tensor(a).to("cuda:0") # Move to GPU
+    # try:
+    #     a_gpu = torch.tensor(a).to("cuda:0") # Move to GPU
 
-    #px = pd.DataFrame(a).astype("float")
-        px = pd.DataFrame(a_gpu.cpu().numpy()).astype("float") # Convert to NumPy on CPU
-    except:
-        px = pd.DataFrame(a).astype("float")
+    # #px = pd.DataFrame(a).astype("float")
+    #     px = pd.DataFrame(a_gpu.cpu().numpy()).astype("float") # Convert to NumPy on CPU
+    # except:
+    px = pd.DataFrame(a).astype("float")
 
     list = []
     for index, row in px.iterrows():
@@ -210,10 +209,12 @@ def draw_line(frame,points,up,down,counted_id,in_line):
                         down = down+1
                         in_line.remove(id)
                         counted_id.append(id)
-            cv2.line(frame, points[0],points[1],100,4)
+            #cv2.line(frame, points[0],points[1],100,4)
             print('line done------------------------')
    # Draw  2 text boxes for people passes line if there is in , out
-    # Draw text box for total in&out people        
+    # Draw text box for total in&out people     
+    if len(points) == 2:
+        cv2.line(frame, points[0],points[1],100,4)
     cvzone.putTextRect(frame,f'Out: {up}',(50,60),2,2, colorR=(0, 0, 255))
     cvzone.putTextRect(frame,f'In: {down}',(50,130),2,2, colorR=(0, 0, 255))
     total = down-up
@@ -227,17 +228,17 @@ def check_points(point):
     return point
 
 # funciton to Load data to firebase
-def load_data_firebase(gate_name, frame, count):
-    _, encoded_frame = cv2.imencode('.jpg', frame)
-    frame_bytes = encoded_frame.tobytes()
-    timestamp = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
-    file_name = f"{gate_name}{timestamp}.jpg"
-    storage_ref = storage.child(file_name)
-    firebase_path = storage_ref.put(frame)
+# def load_data_firebase(gate_name, frame, count):
+#     _, encoded_frame = cv2.imencode('.jpg', frame)
+#     frame_bytes = encoded_frame.tobytes()
+#     timestamp = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+#     file_name = f"{gate_name}{timestamp}.jpg"
+#     storage_ref = storage.child(file_name)
+#     firebase_path = storage_ref.put(frame)
     
-    # Write frame number and timestamp to the Realtime Database
-    db.child("timestamps").child(f"counter{timestamp}").push({"image_name": file_name, "Timestamp": timestamp, "count": count, "from": gate_name})
-    return "done"
+#     # Write frame number and timestamp to the Realtime Database
+#     db.child("timestamps").child(f"counter{timestamp}").push({"image_name": file_name, "Timestamp": timestamp, "count": count, "from": gate_name})
+#     return "done"
 
 def get_coordinates(points, list=None):
     if list is None:
@@ -276,12 +277,11 @@ def crowd_url(url):
 
 
 
-class VideoFeed:
+class countUrl_VideoFeed:
     def __init__(self, camera_type, gate_name, points):
         self.camera_type = camera_type
         self.gate_name = gate_name
         self.points = points
-        self.points_lock = threading.Lock()
         self.video_capture = cv2.VideoCapture(self.camera_type)
         self.in_line = []
         self.up = 0
@@ -289,44 +289,35 @@ class VideoFeed:
         self.wait = 0
         self.total = self.down - self.up
         self.counted_id = []
-        self.start_time = time.time()
 
-    def update_points(self, new_points):
-       # with self.points_lock:
-        self.points = new_points
- 
     def generate_frames(self):
-        up =0
-        down = 0
-        counted_id=[]
-        in_line = []
+        count = 0
         while True:
             try:
                 success, frame = self.video_capture.read()
                 #with self.points_lock:
                 points = self.points  # Get the points
                 if not success:
+                    if count ==10:
+                        break
+                    count = count+1
                     print("not success")
-                    break
+                    continue
                 print('thepointis',points)
                 frame = cv2.resize(frame, (700, 500))
             # Your frame processing logic using updated points...
                 try:
-                    frame, up, down, counted_id, in_line = draw_line(frame, points, up, down, counted_id, in_line)
+                    frame, self.up, self.down, self.counted_id,  self.in_line = draw_line(frame, points, self.up, self.down, self.counted_id,  self.in_line)
                 except:
                     print("line errorss")
                 _, encoded_frame = cv2.imencode('.jpg', frame)
                 frame_bytes = encoded_frame.tobytes()
-                current_time = time.time()
 
-                elapsed_time = current_time - self.start_time
-                if elapsed_time >= 300:
-                    self.start_time = time.time()
-               
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
             except Exception as e:
                 print("caught an exception: ", e)
+        self.video_capture.release()
     def release_capture(self):
         self.video_capture.release()
 
@@ -380,35 +371,32 @@ def generate_and_increment():
     generate_and_increment.counter += 1
     return current_number
 
-class User:
+class camera_count_User:
     def __init__(self, ip_address):
         self.ip_address = ip_address
         self.points = []  # Initialize points for each user
-
+        self.up = 0
+        self.down = 0
+        self.counted_id = []
+        self.in_line = []
     def process_frame(self, frame_data):
-        # Process frame received from the frontend for this user
-        # Adjust this logic based on your requirements
-        encoded_data = frame_data.split(',')[1]
-        nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        width = 640
-        height = 480
-        frame = cv2.resize(frame, (width, height))
-        up = 0
-        down = 0
-        counted_id = []
-        in_line = []
         try:
+            encoded_data = frame_data.split(',')[1]
+            nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            width = 640
+            height = 480
+            frame = cv2.resize(frame, (width, height))
 
-            processed_frame, up, down, counted_id, in_line = draw_line(frame, self.points, up, down, counted_id, in_line)
-        except:
-            print("line errors")
-        print("Good")
-        
-        _, encoded_frame = cv2.imencode('.jpg', processed_frame)
-        processed_frame_data = base64.b64encode(encoded_frame).decode('utf-8')
-        return processed_frame_data
+            
+            processed_frame, self.up, self.down, self.counted_id, self.in_line = draw_line(frame, self.points, self.up, self.down, self.counted_id, self.in_line)
 
+            _, encoded_frame = cv2.imencode('.jpg', processed_frame)
+            processed_frame_data = base64.b64encode(encoded_frame).decode('utf-8')
+            return processed_frame_data
+        except Exception as e:
+            print(f"Error processing frame: {e}")
+            return None
 
 
 class CameraCrowdUser:
@@ -474,4 +462,123 @@ class url_crowd_VideoFeed:
 
     def release_capture(self):
         self.video_capture.release()
+
+
+################################3333
+
+
+class border_VideoFeed:
+    def __init__(self, camera_type, gate_name):
+        self.camera_type = camera_type
+        self.gate_name = gate_name
+        self.video_capture = cv2.VideoCapture(self.camera_type)
+        self.count = 0
+        
+        self.start_time = time.time() 
+    def generate_frames(self):
+        while True:
+            print('jndajfkho;siaj',self.count)
+            try:
+                success, frame = self.video_capture.read()
+                if not success:
+                    print("not success")
+                    break
+                frame = cv2.resize(frame, (700, 500))
+            # Your frame processing logic using updated points...
+                try:
+                    frame,count = human_in_border(frame)
+                    self.count = count
+                except Exception as e:
+                    print("line errorss:")
+                _, encoded_frame = cv2.imencode('.jpg', frame)
+                frame_bytes = encoded_frame.tobytes()
+                current_time = time.time()
+
+                elapsed_time = current_time - self.start_time
+                if elapsed_time >= 300:
+                    self.start_time = time.time()
+               
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                
+            except Exception as e:
+                print("caught an exception: ", e)
+    def release_capture(self):
+        self.video_capture.release()
+
+
+
+######################3
+
+# Function to draw a line on the video frame
+
+# Function to draw a line on the video frame
+def human_in_border(frame):
+    
+
+    results = count_model.predict(frame) 
+    a = results[0].boxes.data
+    # try:
+    #     a_gpu = torch.tensor(a).to("cuda:0") # Move to GPU
+
+    # #px = pd.DataFrame(a).astype("float")
+    #     px = pd.DataFrame(a_gpu.cpu().numpy()).astype("float") # Convert to NumPy on CPU
+    # except:
+    px = pd.DataFrame(a).astype("float")
+
+    list = []
+    total = 0
+    for index, row in px.iterrows():
+        x1 = int(row[0])
+        y1 = int(row[1])
+        x2 = int(row[2])
+        y2 = int(row[3])
+        d = int(row[5])
+     
+        c = class_list[d]
+        if 'person' in c:
+            list.append([x1, y1, x2, y2]) 
+    bbox_id = tracker.update(list)
+    for bbox in bbox_id:
+    #box axis and id
+        x3, y3, x4, y4, id = bbox
+        cx = (x3 + x4) // 2
+        cy = y3
+        total +=1
+        # drow circle in the center of the box
+        cv2.circle(frame, (cx, cy), 4, (255, 0, 255), -1)
+        cv2.rectangle(frame,(x3,y3),(x4,y4),(0,0,255))
+
+    cvzone.putTextRect(frame,f'Total: {total}',(50,60),2,2, colorR=(0, 0, 255))
+
+    return frame , total
+
+
+
+
+
+class border_User:
+    def __init__(self, ip_address):
+        self.ip_address = ip_address
+
+    def process_frame(self, frame_data):
+        # Process frame received from the frontend for this user
+        # Adjust this logic based on your requirements
+        encoded_data = frame_data.split(',')[1]
+        nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        width = 640
+        height = 480
+        frame = cv2.resize(frame, (width, height))
+
+        try:
+
+            processed_frame , total= human_in_border(frame)
+        except:
+            print("line errors")
+        print("Good")
+        
+        _, encoded_frame = cv2.imencode('.jpg', processed_frame)
+        processed_frame_data = base64.b64encode(encoded_frame).decode('utf-8')
+        return processed_frame_data , total
 

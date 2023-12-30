@@ -10,15 +10,15 @@
     />
     <link
       rel="shortcut icon"
-      href="{{ url_for('static', filename='B.ico') }}"
+      href="{{ url_for('static', filename='icon.ico') }}"
     />
   </head>
 
   <body>
     <form method="post" id="myForm" onsubmit="return validateForm()">
       <div class="rectangle">
-        <p class="title">People Counting</p>
-        <img src="static\A.ico" style="height: 100%; width: 10%" />
+        <p class="title">People Counter</p>
+        <img src="static\icon.ico" style="height: 100%; width: 7%" id="homeButton" />
       </div>
 <div class="layout_1">
       <div class="det">
@@ -57,12 +57,27 @@
 
         <button type="submit" name="button" value="count">Gate</button>
         <button type="submit" name="button" value="crowd">Crowd</button>
+        <button type="submit" name="button" value="border">Border</button>
+
         <!-- Added "Crowd" button -->
       </div>
     </div>
     </form>
 
     <script>
+
+      var goBackToHome = function () {
+        window.location.href = "/";
+    };
+
+    // Click event handler for the home button
+    document.getElementById('homeButton').addEventListener('click', function () {
+        goBackToHome();
+    });
+
+
+
+
       function validateForm() {
         var gateName = document.getElementById("gate_name").value;
         var selection = document.getElementById("selection").value;

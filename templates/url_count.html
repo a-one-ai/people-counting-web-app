@@ -5,7 +5,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}">
     <meta charset="UTF-8" />
     <title>Video Stream with Line</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='B.ico') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='icon.ico') }}">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
     
@@ -17,7 +17,9 @@
 <body>
     <div class = "rectangle">
 
-    <p class="second-page-parag">Draw Your Virtual Gate For {{ gate_name }}</p>
+    <p class="second-page-parag-border">Draw Your Virtual Gate For {{ gate_name }}</p>
+    <img src="static\icon.ico" style="height: 100%; width: 7%" id="homeButton" />
+
     </div>
     <div class="block_img_btn">
         <img class="image" id="videoFeed" src="{{ url_for('video_feed', gate_name=gate_name, url=url, points=points, ip=ip) }}" width="700" height="500" />
@@ -30,6 +32,18 @@
     </div>
     
     <script>
+        var goBackToHome = function () {
+            window.location.href = "/";
+        };
+    
+        // Click event handler for the home button
+        document.getElementById('homeButton').addEventListener('click', function () {
+            goBackToHome();
+        });
+
+
+
+
         const video = document.getElementById("videoFeed");
         const coordinatesSpan = document.getElementById("coordinates");
         let stopped = true;

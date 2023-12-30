@@ -9,14 +9,16 @@
     />
     <link
       rel="shortcut icon"
-      href="{{ url_for('static', filename='A1.ico') }}"
+      href="{{ url_for('static', filename='icon.ico') }}"
     />
   </head>
   <body>
     <div class="rectangle">
-      <p class="second-page-parag">
+      <p class="second-page-parag-border">
         Capture To Start Counting For {{gateNameInput}}
       </p>
+      <img src="static\icon.ico" style="height: 100%; width: 7%" id="homeButton" />
+
     </div>
     <div class="vid-container" id="container">
       <video id="video" width="700" height="500" autoplay></video>
@@ -34,6 +36,18 @@
     <button id="capture-btn" class="button_fourth">Capture</button>
 
     <script>
+      var goBackToHome = function () {
+        window.location.href = "/";
+    };
+
+    // Click event handler for the home button
+    document.getElementById('homeButton').addEventListener('click', function () {
+        goBackToHome();
+    });
+
+
+
+
       const ip = "{{ ip }}";
       const video = document.getElementById("video");
       const canvas = document.getElementById("canvas");

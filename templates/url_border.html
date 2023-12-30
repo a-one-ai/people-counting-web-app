@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}">
+    <meta charset="UTF-8" />
+    <title>Video Stream with Line</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='icon.ico') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <div class="rectangle">
+        <p class="second-page-parag-border">Camera Name {{ gate_name }}</p>
+        <img src="static\icon.ico" style="height: 100%; width: 7%" id="homeButton" />
+
+    </div>
+    <div class="block_img_btn">
+        <h1 id="totalCount">Total:<span id="countValue"></span></h1>
+        <img class="image" id="videoFeed" src="{{ url_for('border_video_feed', gate_name=gate_name, url=url, ip=ip) }}" width="700" height="500" />
+    </div>
+
+
+    
+
+      
+        <script>
+
+            var goBackToHome = function () {
+                window.location.href = "/";
+            };
+        
+            // Click event handler for the home button
+            document.getElementById('homeButton').addEventListener('click', function () {
+                goBackToHome();
+            });
+            const totalCountElement = document.getElementById("countValue");
+            const ip = "{{ ip }}";
+    
+            async function getCount() {
+                try {
+                    const response = await fetch('/get_count?ip=' + ip);
+                    const data = await response.json();
+                    const count = data.count;
+    
+                    totalCountElement.innerText = count;
+    
+                    setTimeout(getCount, 1000); // Fetch count every 1 second
+                } catch (error) {
+                    console.error('Error fetching count:', error);
+                }
+            }
+    
+            // Start fetching count
+            getCount();
+        </script>
+</body>
+</html>

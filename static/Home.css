@@ -93,17 +93,6 @@ button:hover {
   background-color: #0284a8;
 }
 
-.second-page-parag {
-  display: block;
-  max-width: 100%; /* Ensure responsiveness */
-  font-size: 40px;
-  color: white;
-  font-weight: bold;
-  padding-top: 1vw; /* Adjusted padding for responsiveness */
-
-  padding-left: 1vw; /* Adjusted padding for responsiveness */
-  margin: 0 auto; /* Center the text */
-}
 
 .image {
   max-width: 100%;
@@ -194,6 +183,41 @@ button:hover {
   color: white;
   font-weight: bold;
   padding-top: 1vw; /* Adjusted padding for responsiveness */
+  position: fixed;
+  color: white;
+  left: 120px;
+  font-size: 30px;
+  font-weight: bold;
+  width: 500px;
+
+  padding-left: 1vw; /* Adjusted padding for responsiveness */
+  margin: 0 auto; /* Center the text */
+}
+
+
+
+.second-page-parag-border{
+  position: fixed;
+  color: white;
+  left: 120px;
+  font-weight: bold;
+  width: 800px;
+  display: block;
+  max-width: 100%; /* Ensure responsiveness */
+  font-size: 40px;
+  padding-top: 1vw; /* Adjusted padding for responsiveness */
+
+  padding-left: 1vw; /* Adjusted padding for responsiveness */
+  margin: 0 auto; 
+}
+
+.second-page-parag {
+  display: block;
+  max-width: 100%; /* Ensure responsiveness */
+  font-size: 40px;
+  color: white;
+  font-weight: bold;
+  padding-top: 1vw; /* Adjusted padding for responsiveness */
 
   padding-left: 1vw; /* Adjusted padding for responsiveness */
   margin: 0 auto; /* Center the text */
@@ -209,3 +233,4 @@ button:hover {
   left: 0;
   right: 0;
 }
+

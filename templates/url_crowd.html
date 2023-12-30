@@ -11,7 +11,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <link
       rel="shortcut icon"
-      href="{{ url_for('static', filename='B.ico') }}"
+      href="{{ url_for('static', filename='icon.ico') }}"
     />
     <!-- <style>
         .image {
@@ -40,9 +40,11 @@
   <body>
     <div class="container_fourth">
       <div class="rectangle">
-        <p class="fourth-page-parag">
+        <p class="second-page-parag-border">
           Capture To Start Counting For {{ gate_name }}
         </p>
+        <img src="static\icon.ico" style="height: 100%; width: 7%" id="homeButton" />
+
       </div>
     </div>
 
@@ -69,6 +71,18 @@
     <button id="capture-btn" class="button_fourth">Capture</button>
 
     <script>
+
+      var goBackToHome = function () {
+        window.location.href = "/";
+    };
+
+    // Click event handler for the home button
+    document.getElementById('homeButton').addEventListener('click', function () {
+        goBackToHome();
+    });
+
+
+
       const canvas = document.getElementById("canvas");
       const captureButton = document.getElementById("capture-btn");
       const capturedImageContainer = document.getElementById(
