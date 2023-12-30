@@ -47,7 +47,7 @@ def index():
         elif selection == 'url' and button == 'crowd':
             rout = 'url_crowd'
             return redirect(url_for(rout, my_gate_name=gate_name, url=url,ip=ip))
-        elif selection == 'url' and button == 'Border':
+        elif selection == 'url' and button == 'border':
             rout = 'url_border'
             return redirect(url_for(rout, my_gate_name=gate_name,url=url,ip=ip))
 
@@ -58,7 +58,7 @@ def index():
         elif selection == 'camera' and button == 'crowd':
             rout = 'camera_crowd'
             return redirect(url_for(rout, my_gate_name=gate_name,ip=ip))
-        elif selection == 'camera' and button == 'Border':
+        elif selection == 'camera' and button == 'border':
             rout = 'camera_border'
             return redirect(url_for(rout, my_gate_name=gate_name,ip=ip))
     return render_template('form.html')
