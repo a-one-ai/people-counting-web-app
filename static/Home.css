@@ -121,6 +121,15 @@ button:hover {
   align-items: flex-start;
 }
 
+
+.totalNbutton{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+
+}
+
 .navigation-button {
   display: flex;
   justify-content: space-between;
@@ -232,5 +241,18 @@ button:hover {
   top: 0;
   left: 0;
   right: 0;
+}
+.button {
+  padding: 0 20px; /* Adjusted padding */
+  height: 50px;
+  width: 120px; /* Fixed height */
+  border: none;
+  border-radius: 8px;
+  background-color: #03e9f4;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+  font-size: 20px;
 }
 

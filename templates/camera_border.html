@@ -1,130 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Video</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}" />
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='Home.css') }}"
+    />
 
-    <div class = "rectangle">
-
-    <p class="second-page-parag-border">Camera Name {{ gateNameInput }}</p>
-    <img src="static\icon.ico" style="height: 100%; width: 7%" id="homeButton" />
-
-
+    <source
+      src="{{ url_for('static', filename='mn.mp3') }}"
+      type="'audio/mpeg"
+    />
+  </head>
+  <body>
+    <div class="rectangle">
+      <p class="second-page-parag-border">Camera Name {{ gateNameInput }}</p>
+      <img
+        src="static\icon.ico"
+        style="height: 100%; width: 7%"
+        id="homeButton"
+      />
     </div>
     <div class="block_img_btn">
-        <canvas id="outputCanvas" width="700" height="500"></canvas>
-        <p>Count: <span id="countValue"></span></p>
+      <canvas id="outputCanvas" width="800" height="600"></canvas>
+      
+      <div class="totalNbutton">
 
-       
-       
+      <h1 class ='total'> Total: <span id="countValue"></span></h1>
+      <button class="button" id="mm">Stop</button>
     </div>
-
+</div>
     <script>
-        var goBackToHome = function () {
-            window.location.href = "/";
-        };
-    
-        // Click event handler for the home button
-        document.getElementById('homeButton').addEventListener('click', function () {
-            goBackToHome();
+      var goBackToHome = function () {
+        window.location.href = "/";
+      };
+
+      // Click event handler for the home button
+      document
+        .getElementById("homeButton")
+        .addEventListener("click", function () {
+          goBackToHome();
         });
-    
 
+      let sound1 = new Audio("static/mn.mp3");
+      let audio = document.createElement("audio");
+      audio.src = "static/mn.mp3";
 
+      let playSound = false;
 
+      function rewindAudio() {
+        audio.currentTime = 0;
+      }
 
-        const ip = "{{ ip }}";
-        let video = document.createElement('video');
-        document.body.appendChild(video);
-        video.hidden = true;
-        window.onload = () => startStream('');
+      /*document.getElementById('captureButton').addEventListener('click', async () => {
+              sound1.play();
+              playSound = true;
+              });*/
 
-        let inputCanvas = document.createElement('canvas');
-        document.body.appendChild(inputCanvas);
-        inputCanvas.style.display = 'none';
+      document.getElementById("mm").addEventListener("click", function () {
+        sound1.pause();
+        rewindAudio();
+        playSound = false;
+      });
 
-        let outputCanvas = document.getElementById('outputCanvas');
-        let outputContext = outputCanvas.getContext('2d');
-        let sendInterval = 200;
-        let stopped = false;
+      document.body.addEventListener("click", function () {
+        audio.pause();
+        rewindAudio();
+        playSound = false;
+      });
 
-        function startStream() {
-            startVideo()
-                .then(() => {
-                    setInterval(function () {
-                        if (stopped) {
-                            return;
-                        }
+      const ip = "{{ ip }}";
+      let video = document.createElement("video");
+      document.body.appendChild(video);
+      video.hidden = true;
+      window.onload = () => startStream("");
 
-                        inputCanvas.width = video.videoWidth;
-                        inputCanvas.height = video.videoHeight;
-                        let inputContext = inputCanvas.getContext('2d');
-                        inputContext.drawImage(video, 0, 0, inputCanvas.width, inputCanvas.height);
-                        let imgData = inputCanvas.toDataURL('image/jpeg');
+      let inputCanvas = document.createElement("canvas");
+      document.body.appendChild(inputCanvas);
+      inputCanvas.style.display = "none";
 
-                        fetch('/process_frame_border', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ frame: imgData, ip: ip })  // Include 'ip' in the request body
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data && data.processed_frame) {
-                                    let processedImage = new Image();
-                                    processedImage.onload = function () {
-                                        outputContext.drawImage(processedImage, 0, 0, 640, 480);
-                                    };
-                                    processedImage.src = 'data:image/jpeg;base64,' + data.processed_frame;
+      let outputCanvas = document.getElementById("outputCanvas");
+      let outputContext = outputCanvas.getContext("2d");
+      let sendInterval = 200;
+      let stopped = false;
 
-                                    // Update the count value in the HTML
-                                    if (data.count !== undefined) {
-                                        document.getElementById('countValue').innerText = data.count;
-                                    }
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                            });
-                    }, sendInterval);
+      function startStream() {
+        startVideo()
+          .then(() => {
+            setInterval(function () {
+              if (stopped) {
+                return;
+              }
+
+              inputCanvas.width = video.videoWidth;
+              inputCanvas.height = video.videoHeight;
+              let inputContext = inputCanvas.getContext("2d");
+              inputContext.drawImage(
+                video,
+                0,
+                0,
+                inputCanvas.width,
+                inputCanvas.height
+              );
+              let imgData = inputCanvas.toDataURL("image/jpeg");
+
+              fetch("/process_frame_border", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ frame: imgData, ip: ip }), // Include 'ip' in the request body
+              })
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data && data.processed_frame) {
+                    let processedImage = new Image();
+                    processedImage.onload = function () {
+                      outputContext.drawImage(processedImage, 0, 0, 640, 480);
+                    };
+                    processedImage.src =
+                      "data:image/jpeg;base64," + data.processed_frame;
+
+                    // Update the count value in the HTML
+                    if (data.count !== undefined) {
+                      document.getElementById("countValue").innerText =
+                        data.count;
+
+                      if (
+                        data.count > 0  &&
+                        data.count != lastcount
+                      ) {
+                        lastcount = data.count;
+                        sound1.play();
+                        //alert(data.count+" " +"persons are crossing the Border");  
+                      }
+                    }
+                  }
                 })
-                .catch(error => {
-                    console.error('Error starting video:', error);
+                .catch((error) => {
+                  console.error("Error:", error);
                 });
-        }
-        function startVideo() {
-            return new Promise((resolve, reject) => {
-                if (navigator.mediaDevices.getUserMedia) {
-                    navigator.mediaDevices.getUserMedia({ video: true })
-                        .then(function (stream) {
-                            video.srcObject = stream;
-                            video.play();
-                            resolve();
-                        })
-                        .catch(function (error) {
-                            reject(error);
-                        });
-                } else {
-                    reject(new Error('getUserMedia is not supported in this browser.'));
-                }
-            });
-        }
-        function stopStream() {
-            stopped = true;
-            let tracks = video.srcObject.getTracks();
+            }, sendInterval);
+          })
+          .catch((error) => {
+            console.error("Error starting video:", error);
+          });
+      }
 
-            tracks.forEach(track => track.stop());
-            video.srcObject = null;
-            outputContext.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
-        }
-      
+      let lastcount = 0;
 
-      
+      function startVideo() {
+        return new Promise((resolve, reject) => {
+          if (navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices
+              .getUserMedia({ video: true })
+              .then(function (stream) {
+                video.srcObject = stream;
+                video.play();
+                resolve();
+              })
+              .catch(function (error) {
+                reject(error);
+              });
+          } else {
+            reject(new Error("getUserMedia is not supported in this browser."));
+          }
+        });
+      }
+      function stopStream() {
+        stopped = true;
+        let tracks = video.srcObject.getTracks();
+
+        tracks.forEach((track) => track.stop());
+        video.srcObject = null;
+        outputContext.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+      }
     </script>
-</body>
+  </body>
 </html>

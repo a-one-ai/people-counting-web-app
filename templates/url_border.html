@@ -1,41 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='Home.css') }}">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='Home.css') }}"
+    />
+
+    <source
+      src="{{ url_for('static', filename='mn.mp3') }}"
+      type="'audio/mpeg"
+    />
+
     <meta charset="UTF-8" />
     <title>Video Stream with Line</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='icon.ico') }}">
+    <link
+      rel="shortcut icon"
+      href="{{ url_for('static', filename='icon.ico') }}"
+    />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="rectangle">
-        <p class="second-page-parag-border">Camera Name {{ gate_name }}</p>
-        <img src="static\icon.ico" style="height: 100%; width: 7%" id="homeButton" />
-
+      <p class="second-page-parag-border">Camera Name {{ gate_name }}</p>
+      <img
+        src="static\icon.ico"
+        style="height: 100%; width: 7%"
+        id="homeButton"
+      />
     </div>
     <div class="block_img_btn">
-        <h1 id="totalCount">Total:<span id="countValue"></span></h1>
-        <img class="image" id="videoFeed" src="{{ url_for('border_video_feed', gate_name=gate_name, url=url, ip=ip) }}" width="700" height="500" />
+      <img
+        class="image"
+        id="videoFeed"
+        src="{{ url_for('border_video_feed', gate_name=gate_name, url=url, ip=ip) }}"
+        width="800"
+        height="600"
+      />
+      <div class="totalNbutton">
+      <h1 class ='total' id="totalCount">Total:<span id="countValue"></span></h1>
+
+      <button class="button" id="mm">Stop</button>
+    </div>
     </div>
 
+    <!-- 
+    <button class ='button' id="captureButton">Capture</button> -->
 
+    <script>
+      /*
     
-
-      
-        <script>
-
-            var goBackToHome = function () {
-                window.location.href = "/";
-            };
+        let sound1 = new Audio('static/mn.mp3');
+        let audio = document.createElement("audio");
+        audio.src = "static/mn.mp3";
+    
+    
+        function rewindAudio() {
+            audio.currentTime = 0;
+        }
+    
+        document.getElementById('captureButton').addEventListener('click', async () => {
+            sound1.play();
+    
+       
+        });
+    
+        document.getElementById('mm').addEventListener('click', function () {
+            sound1.pause(),
+            rewindAudio();
+        });
         
-            // Click event handler for the home button
-            document.getElementById('homeButton').addEventListener('click', function () {
-                goBackToHome();
-            });
-            const totalCountElement = document.getElementById("countValue");
-            const ip = "{{ ip }}";
-    
+        document.body.addEventListener("click", function () {
+            audio.pause(),
+            rewindAudio();
+        });
+    */
+
+      var goBackToHome = function () {
+        window.location.href = "/";
+      };
+
+      // Click event handler for the home button
+      document
+        .getElementById("homeButton")
+        .addEventListener("click", function () {
+          goBackToHome();
+        });
+
+      const totalCountElement = document.getElementById("countValue");
+      const ip = "{{ ip }}";
+
+      let sound1 = new Audio("static/mn.mp3");
+      let audio = document.createElement("audio");
+      audio.src = "static/mn.mp3";
+
+      let playSound = false;
+
+      function rewindAudio() {
+        audio.currentTime = 0;
+      }
+
+      /*document.getElementById('captureButton').addEventListener('click', async () => {
+            sound1.play();
+            playSound = true;
+            });*/
+
+      document.getElementById("mm").addEventListener("click", function () {
+        sound1.pause();
+        rewindAudio();
+        playSound = false;
+      });
+
+      document.body.addEventListener("click", function () {
+        audio.pause();
+        rewindAudio();
+        playSound = false;
+      });
+
+      async function getCount() {
+        try {
+          const response = await fetch("/get_count?ip=" + ip);
+          const data = await response.json();
+          const count = data.count;
+
+          totalCountElement.innerText = count;
+
+          if (count > 0 && count != lastcount) {
+            lastcount = count;
+            sound1.play();
+            alert(count+" " +"persons are crossing the Border"); 
+          }
+
+          setTimeout(getCount, 1000); // Fetch count every 1 second
+        } catch (error) {
+          console.error("Error fetching count:", error);
+        }
+      }
+
+      // Call getCount to start the process
+      getCount();
+      let lastcount = 0;
+
+      /*
             async function getCount() {
                 try {
                     const response = await fetch('/get_count?ip=' + ip);
@@ -49,9 +155,11 @@
                     console.error('Error fetching count:', error);
                 }
             }
-    
+   
             // Start fetching count
             getCount();
-        </script>
-</body>
+
+             */
+    </script>
+  </body>
 </html>
