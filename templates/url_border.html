@@ -116,7 +116,7 @@
         rewindAudio();
         playSound = false;
       });
-
+      let lastcount = 0;
       async function getCount() {
         try {
           const response = await fetch("/get_count?ip=" + ip);
@@ -125,7 +125,7 @@
 
           totalCountElement.innerText = count;
 
-          if (count > 0 && count != lastcount) {
+          if (count > 0 && count !== lastcount) {
             lastcount = count;
             sound1.play();
            // alert(count+" " +"persons are crossing the Border"); 
@@ -139,7 +139,6 @@
 
       // Call getCount to start the process
       getCount();
-      let lastcount = 0;
 
       /*
             async function getCount() {

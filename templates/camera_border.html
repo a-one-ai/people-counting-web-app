@@ -4,6 +4,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Video</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
+
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='Home.css') }}"
@@ -32,7 +37,30 @@
       <button class="button" id="mm">Stop</button>
     </div>
 </div>
-    <script>
+    <script type="module">
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import {getFirestore, collection, addDoc, serverTimestamp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+      import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"; 
+    
+
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBp1-XkxPN_8A2P0eN1zvfZn2UmK67m0PM",
+        authDomain: "borders-6mmmsha.firebaseapp.com",
+        projectId: "borders-6mmmsha",
+        storageBucket: "borders-6mmmsha.appspot.com",
+        messagingSenderId: "921502256532",
+        appId: "1:921502256532:web:cfa32a4aea85e7ebadd381",
+        measurementId: "G-DQJ79K7Q3M"
+        };
+
+
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+        const storage = getStorage(app);
+
+
       var goBackToHome = function () {
         window.location.href = "/";
       };
@@ -72,6 +100,7 @@
       });
 
       const ip = "{{ ip }}";
+      var gate_name = "{{gateNameInput}}";
       let video = document.createElement("video");
       document.body.appendChild(video);
       video.hidden = true;
@@ -85,6 +114,9 @@
       let outputContext = outputCanvas.getContext("2d");
       let sendInterval = 200;
       let stopped = false;
+      
+
+      let lastcount = 0;
 
       function startStream() {
         startVideo()
@@ -111,10 +143,10 @@
                 headers: {
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ frame: imgData, ip: ip }), // Include 'ip' in the request body
+                body: JSON.stringify({ frame: imgData, ip: ip ,gate_name:gate_name}), // Include 'ip' in the request body
               })
                 .then((response) => response.json())
-                .then((data) => {
+                .then( async (data) => {
                   if (data && data.processed_frame) {
                     let processedImage = new Image();
                     processedImage.onload = function () {
@@ -128,29 +160,49 @@
                       document.getElementById("countValue").innerText =
                         data.count;
 
-                      if (
-                        data.count > 0  &&
-                        data.count != lastcount
-                      ) {
+                      if (data.count > 0  && data.count !== lastcount) {
                         lastcount = data.count;
                         sound1.play();
+
+                        let decodedImageData = atob(data.processed_frame);
+                        // Convert the decoded binary data to a Uint8Array
+                        let arrayBuffer = new ArrayBuffer(decodedImageData.length);
+                        let uint8Array = new Uint8Array(arrayBuffer);
+                        
+                        for (let i = 0; i < decodedImageData.length; i++) {
+                          uint8Array[i] = decodedImageData.charCodeAt(i);
+                        }
+                        // Create a Blob from the Uint8Array
+                        let blob = new Blob([uint8Array], { type: "image/jpeg" });
+                
+                        const storageRef = ref(storage, `${gate_name}/${gate_name}_${Date.now()}.jpg`);
+                        
+                        await uploadBytes(storageRef, blob);
+                
+                        const imageUrl = await getDownloadURL(storageRef);
+                        
+
+
+                        await addDoc(collection(firestore, gate_name), {
+                          loginTime: serverTimestamp(),
+                          currentscene: imageUrl,
+                          count: data.count
+                          });
+
                         //alert(data.count+" " +"persons are crossing the Border");  
                       }
                     }
                   }
                 })
-                .catch((error) => {
+                .catch(error => {
                   console.error("Error:", error);
                 });
             }, sendInterval);
           })
-          .catch((error) => {
+          .catch(error => {
             console.error("Error starting video:", error);
           });
       }
-
-      let lastcount = 0;
-
       function startVideo() {
         return new Promise((resolve, reject) => {
           if (navigator.mediaDevices.getUserMedia) {

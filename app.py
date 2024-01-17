@@ -1,8 +1,11 @@
-from flask_cors import CORS
+# from flask_cors import CORS
 from flask import redirect, url_for
 from flask import Flask, render_template, Response, request, jsonify
 import numpy as np
 from functions import *
+
+
+
 
 import cv2
 # cv2.setNumThreads(4)  # Set the number of threads for OpenCV
@@ -12,8 +15,12 @@ import cv2
 #num_cpu_cores = torch.multiprocessing.cpu_count()
 # torch.set_num_threads(4)
 
+# Initialize Firebase
+
+
+
 app = Flask(__name__)
-CORS(app) 
+# CORS(app) 
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -28,10 +35,10 @@ def index():
         if url != '':
             try:
                 try_url = youtube(url)
-                if try_url =='url error':
-                    url = stream(url)
-                else:
-                    url = try_url
+                # if try_url =='url error':
+                #     url = stream(url)
+                # else:
+                url = try_url
             except:
                 return "url error"
             
@@ -54,7 +61,9 @@ def index():
 
         elif selection == 'camera' and button == 'count':
             rout = 'camera_count'
-            return redirect(url_for(rout, my_gate_name=gate_name,ip=ip))
+            return redirect(url_for(rout, # The above code is declaring a variable named
+            # "my_gate_name" in Python.
+            my_gate_name=gate_name,ip=ip))
         elif selection == 'camera' and button == 'crowd':
             rout = 'camera_crowd'
             return redirect(url_for(rout, my_gate_name=gate_name,ip=ip))
@@ -78,7 +87,7 @@ def url_count():
 def update_coordinates():
     data = request.json
     received_coordinates = data.get('coordinates')
-    ip = data.get('ip') 
+    ip = data.get('ip')                                                                                                                                             
     if received_coordinates:
         points = get_coordinates(received_coordinates)
         points = check_points(points)
@@ -100,6 +109,7 @@ def video_feed():
     client_id = ip  # Unique client identifier
     if client_id not in url_count_users:
         url_count_users[client_id] = countUrl_VideoFeed(url, gate_name, points)
+   
     return Response(url_count_users[client_id].generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')      
 
 @app.route('/release_capture', methods=['POST'])
@@ -128,6 +138,7 @@ def process_received_frame():
     if request.method == 'POST':
         frame_data = request.json['frame']
         ip = request.json['ip']
+        gate_name = request.json["gate_name"]
         client_id = ip
 
         if client_id not in camera_count_users:
@@ -189,6 +200,7 @@ def upload():
         ip = data.get('ip')  # Retrieve the 'ip' value from the JSON payload
         print('the ip is', ip) 
         # Retrieve or create the user instance based on IP
+        gate_name = request.json["gate_name"]
         if ip in camera_crowd_users:
             user_instance = camera_crowd_users[ip]
         else:
@@ -279,6 +291,7 @@ def capture_signal():
     print("the is fjaiojiae",ip)
     if value and ip in url_crowd_users:
         user_instance = url_crowd_users[ip]
+        gate_name = request.json["gate_name"]
         processed_image_data = process_captured_frame(user_instance.cap_frame)
         return jsonify({'image': processed_image_data})
 
@@ -337,7 +350,7 @@ def border_video_feed():
 
     print('iam the caunt man',border_video_feeds[client_id].count)
     return Response(border_video_feeds[client_id].generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-      
+
 @app.route('/get_count')
 def get_count():
     ip = request.args.get('ip')
@@ -345,7 +358,7 @@ def get_count():
 
     if client_id in border_video_feeds:
         count = border_video_feeds[client_id].count
-        return jsonify({'count': count})
+        return jsonify({'count': count})    
 
     return jsonify({'count': 0})  # Return default count if client_id not found
 
@@ -363,6 +376,8 @@ def process_frame_border():
     if request.method == 'POST':
         frame_data = request.json['frame']
         ip = request.json['ip']  # Get 'ip' from the request body
+        gate_name = request.json["gate_name"]
+        print('fffffffffffffffffffffffffffffff',gate_name)
         # client_id = request.remote_addr  # Get client IP as a unique identifier
         client_id = ip  # Get client IP as a unique identifier
 
@@ -400,4 +415,5 @@ def process_frame_border():
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=7050)
+
 

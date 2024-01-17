@@ -9,6 +9,11 @@
     <meta charset="UTF-8" />
     <title>Video Stream with Line</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"></script>
+
     <link
       rel="shortcut icon"
       href="{{ url_for('static', filename='icon.ico') }}"
@@ -70,7 +75,28 @@
 
     <button id="capture-btn" class="button_fourth">Capture</button>
 
-    <script>
+    <script type="module">
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import {getFirestore, collection, addDoc, serverTimestamp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+      import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"; 
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBp1-XkxPN_8A2P0eN1zvfZn2UmK67m0PM",
+        authDomain: "borders-6mmmsha.firebaseapp.com",
+        projectId: "borders-6mmmsha",
+        storageBucket: "borders-6mmmsha.appspot.com",
+        messagingSenderId: "921502256532",
+        appId: "1:921502256532:web:cfa32a4aea85e7ebadd381",
+        measurementId: "G-DQJ79K7Q3M"
+        };
+
+
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+        const storage = getStorage(app);
+        const storageRef = ref(storage, `image_${Date.now()}.jpg`);
+
 
       var goBackToHome = function () {
         window.location.href = "/";
@@ -89,6 +115,7 @@
         "captured-image-container"
       );
       const ip = "{{ ip }}";
+      var gate_name = "{{gate_name}}";
 
       captureButton.addEventListener("click", function () {
         sendCaptureSignal(1, ip);
@@ -100,10 +127,10 @@
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ value: value, ip: ip }),
+          body: JSON.stringify({ value: value, ip: ip, gate_name:gate_name }),
         })
           .then((response) => response.json())
-          .then((data) => {
+          .then(async (data) => {
             if (data.image) {
               const receivedImageData = data.image;
               const decodedImageData = atob(receivedImageData);
@@ -119,11 +146,32 @@
               imgElement.src = URL.createObjectURL(blob);
               capturedImageContainer.innerHTML = "";
               capturedImageContainer.appendChild(imgElement);
+            
+
+            const arrayBuffer = new ArrayBuffer(decodedImageData.length);
+            const uint8Array = new Uint8Array(arrayBuffer);
+            for (let i = 0; i < decodedImageData.length; i++) {
+              uint8Array[i] = decodedImageData.charCodeAt(i);
             }
-          })
+
+
+            let blob2 = new Blob([uint8Array], { type: "image/jpeg" });
+            
+            const storageRef = ref(storage, `${gate_name}/${gate_name}_${Date.now()}.jpg`);
+
+            await uploadBytes(storageRef, blob2);
+
+            const imageUrl = await getDownloadURL(storageRef);
+    
+    
+            await addDoc(collection(firestore, gate_name), {
+              loginTime: serverTimestamp(),
+              currentscene: imageUrl
+              });
+          }})
           .catch((error) => {
             console.error("Error sending capture signal:", error);
-          });
+      });
       }
     </script>
   </body>

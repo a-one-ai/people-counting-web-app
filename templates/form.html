@@ -58,6 +58,7 @@
         <button type="submit" name="button" value="count">Gate</button>
         <button type="submit" name="button" value="crowd">Crowd</button>
         <button type="submit" name="button" value="border">Border</button>
+        
 
         <!-- Added "Crowd" button -->
       </div>
@@ -65,18 +66,14 @@
     </form>
 
     <script>
-
       var goBackToHome = function () {
         window.location.href = "/";
     };
 
     // Click event handler for the home button
-    document.getElementById('homeButton').addEventListener('click', function () {
-        goBackToHome();
+    document.getElementById('homeButton').addEventListener('click', () => {
+      goBackToHome();
     });
-
-
-
 
       function validateForm() {
         var gateName = document.getElementById("gate_name").value;

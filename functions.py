@@ -5,22 +5,50 @@ from ultralytics import YOLO
 import math
 import numpy as np
 from pytube import YouTube
-import streamlink
+# import streamlink
 import pandas as pd
 from ultralytics import YOLO
 from tracker import Tracker
 import cvzone
-from datetime import datetime 
+from datetime import datetime , timedelta
 import time
 #import pyrebase
 import base64
 from flask import jsonify
 import threading
+import pyrebase
+import firebase_admin
+from firebase_admin import credentials, initialize_app, get_app,storage,firestore
 # import torch
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # torch.cuda.set_device(0) 
 #num_cpu_cores = torch.multiprocessing.cpu_count()
 # torch.set_num_threads(4)  # Set the number of threads for PyTorch
+
+firebaseConfig = {
+  "apiKey": "AIzaSyBp1-XkxPN_8A2P0eN1zvfZn2UmK67m0PM",
+  "authDomain": "borders-6mmmsha.firebaseapp.com",
+  "projectId": "borders-6mmmsha",
+  "storageBucket": "borders-6mmmsha.appspot.com",
+  "messagingSenderId": "921502256532",
+  "appId": "1:921502256532:web:cfa32a4aea85e7ebadd381",
+  "measurementId": "G-DQJ79K7Q3M"
+}
+
+
+
+# Specify the path to your service account key JSON file
+cred = credentials.Certificate("borders-6mmmsha-firebase-adminsdk-4wa3j-80a31303e1.json")
+app = initialize_app(cred, options={"storageBucket": firebaseConfig["storageBucket"]})
+
+
+
+
+db = firestore.client()
+bucket = storage.bucket()
+
+
+
 
 
 tracker = Tracker()
@@ -104,13 +132,13 @@ def youtube(url):
         return "url error"
     
 # Function that return url for live streaming (Facebook - Twitter - Youtube) 
-def stream(url):
-    try:
-        streams = streamlink.streams(url)
-        best_stream = streams["best"]
-        return best_stream.url
-    except:
-        return "url error"
+# def stream(url):
+#     try:
+#         streams = streamlink.streams(url)
+#         best_stream = streams["best"]
+#         return best_stream.url
+#     except:
+#         return "url error"
 
 def orientation(p, q, r):
     val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
@@ -169,7 +197,7 @@ def draw_line(frame,points,up,down,counted_id,in_line):
         x2 = int(row[2])
         y2 = int(row[3])
         d = int(row[5])
-     
+    
         c = class_list[d]
         if 'person' in c:
             list.append([x1, y1, x2, y2]) 
@@ -180,14 +208,14 @@ def draw_line(frame,points,up,down,counted_id,in_line):
         cx = (x3 + x4) // 2
         cy = y3
         # drow circle in the center of the box
-        cv2.circle(frame, (cx, cy), 4, (255, 0, 255), -1)
+        cv2.circle(frame, (cx, (y3+y4)//2 ), 4, (255, 0, 255), -1)
         # if the center point in the line
         if len(points) == 2:
             bbox_intersects_line = intersects(points[0], points[1], (x3, y3), (x4, y4))
- 
+
             if bbox_intersects_line:
                 cv2.rectangle(frame,(x3,y3),(x4,y4),(0,0,255))
-                cvzone.putTextRect(frame,f'{id}',(x3,y3),1,2)
+                cvzone.putTextRect(frame,f'{id}',(x3,y3),1,2)     
                 # check if it calulated or not
                 if id not in in_line:
                     in_line.append(id)
@@ -211,7 +239,7 @@ def draw_line(frame,points,up,down,counted_id,in_line):
                         counted_id.append(id)
             #cv2.line(frame, points[0],points[1],100,4)
             print('line done------------------------')
-   # Draw  2 text boxes for people passes line if there is in , out
+    # Draw  2 text boxes for people passes line if there is in , out
     # Draw text box for total in&out people     
     if len(points) == 2:
         cv2.line(frame, points[0],points[1],100,4)
@@ -292,6 +320,7 @@ class countUrl_VideoFeed:
 
     def generate_frames(self):
         count = 0
+        
         while True:
             try:
                 success, frame = self.video_capture.read()
@@ -312,6 +341,18 @@ class countUrl_VideoFeed:
                     print("line errorss")
                 _, encoded_frame = cv2.imencode('.jpg', frame)
                 frame_bytes = encoded_frame.tobytes()
+                current_time = datetime.now()
+                minutes = datetime.now().minute
+                seconds = datetime.now(). second
+                if minutes % 5 == 0 and seconds %60 ==0:
+            
+                    storage_path = f"{self.gate_name}/'{self.gate_name}_{current_time}.jpg"
+                    collection_name = self.gate_name
+                    doc_ref = db.collection(collection_name).add({"count in":self.up,"count down":self.down,"total":self.total , "timestamp":current_time, "from":self.gate_name})
+                    blob = bucket.blob(storage_path)
+                    blob.upload_from_string(frame_bytes, content_type='image/jpeg')
+                    
+                        
 
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
@@ -476,10 +517,14 @@ class border_VideoFeed:
         
         self.start_time = time.time() 
     def generate_frames(self):
+        lastcount = 0
         while True:
+            
             print('jndajfkho;siaj',self.count)
             try:
                 success, frame = self.video_capture.read()
+                
+                
                 if not success:
                     print("not success")
                     break
@@ -488,16 +533,45 @@ class border_VideoFeed:
                 try:
                     frame,count = human_in_border(frame)
                     self.count = count
+                    
+                    
+                    
+                    
                 except Exception as e:
                     print("line errorss:")
                 _, encoded_frame = cv2.imencode('.jpg', frame)
                 frame_bytes = encoded_frame.tobytes()
                 current_time = time.time()
+                current_times = datetime.now()
+                
+
+                if  self.count > 0 and self.count != lastcount :
+  
+                    print ("mmmmmmmmmmmmmmmmmmmmmmmmmm",lastcount)
+                    collection_name = self.gate_name
+                    storage_path = f"{self.gate_name}/{self.gate_name}_{current_times}.jpg"
+                    doc_ref = db.collection(collection_name).add({"count":self.count,"timestamp":current_times,"from": self.gate_name})
+                    blob = bucket.blob(storage_path)
+                    blob.upload_from_string(frame_bytes, content_type='image/jpeg')
+                    print ('hello mary w monica')
+                    lastcount = self.count
+                    print ("fffffffffffffffffffffffffffffffff",lastcount)
+                
+                
+                    
+        
+        
+		
 
                 elapsed_time = current_time - self.start_time
                 if elapsed_time >= 300:
                     self.start_time = time.time()
-               
+                # file_name = f'image_{int(time.time())}.jpg'
+                # storage_ref = bucket.blob(file_name)
+                # Upload the image file to Firebase Storage
+
+                    
+            
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
                 
@@ -534,7 +608,7 @@ def human_in_border(frame):
         x2 = int(row[2])
         y2 = int(row[3])
         d = int(row[5])
-     
+    
         c = class_list[d]
         if 'person' in c:
             list.append([x1, y1, x2, y2]) 
@@ -546,7 +620,7 @@ def human_in_border(frame):
         cy = y3
         total +=1
         # drow circle in the center of the box
-        cv2.circle(frame, (cx, cy), 4, (255, 0, 255), -1)
+        cv2.circle(frame, (cx, (x3 + x4) // 2), 4, (255, 0, 255), -1)
         cv2.rectangle(frame,(x3,y3),(x4,y4),(0,0,255))
 
     cvzone.putTextRect(frame,f'Total: {total}',(50,60),2,2, colorR=(0, 0, 255))
@@ -574,11 +648,13 @@ class border_User:
         try:
 
             processed_frame , total= human_in_border(frame)
+        
         except:
             print("line errors")
         print("Good")
         
         _, encoded_frame = cv2.imencode('.jpg', processed_frame)
         processed_frame_data = base64.b64encode(encoded_frame).decode('utf-8')
+    
         return processed_frame_data , total
 
