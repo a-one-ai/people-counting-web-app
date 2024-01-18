@@ -5,14 +5,13 @@ from ultralytics import YOLO
 import math
 import numpy as np
 from pytube import YouTube
-# import streamlink
+import streamlink
 import pandas as pd
 from ultralytics import YOLO
 from tracker import Tracker
 import cvzone
 from datetime import datetime , timedelta
 import time
-#import pyrebase
 import base64
 from flask import jsonify
 import threading
@@ -132,13 +131,13 @@ def youtube(url):
         return "url error"
     
 # Function that return url for live streaming (Facebook - Twitter - Youtube) 
-# def stream(url):
-#     try:
-#         streams = streamlink.streams(url)
-#         best_stream = streams["best"]
-#         return best_stream.url
-#     except:
-#         return "url error"
+def stream(url):
+    try:
+        streams = streamlink.streams(url)
+        best_stream = streams["best"]
+        return best_stream.url
+    except:
+        return "url error"
 
 def orientation(p, q, r):
     val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
@@ -348,7 +347,7 @@ class countUrl_VideoFeed:
             
                     storage_path = f"{self.gate_name}/'{self.gate_name}_{current_time}.jpg"
                     collection_name = self.gate_name
-                    doc_ref = db.collection(collection_name).add({"count in":self.up,"count down":self.down,"total":self.total , "timestamp":current_time, "from":self.gate_name})
+                    doc_ref = db.collection(collection_name).add({"count in":self.down,"count down":self.up,"total": self.down - self.up  , "timestamp":current_time, "from":self.gate_name})
                     blob = bucket.blob(storage_path)
                     blob.upload_from_string(frame_bytes, content_type='image/jpeg')
                     
@@ -434,7 +433,7 @@ class camera_count_User:
 
             _, encoded_frame = cv2.imencode('.jpg', processed_frame)
             processed_frame_data = base64.b64encode(encoded_frame).decode('utf-8')
-            return processed_frame_data
+            return processed_frame_data , self.up, self.down
         except Exception as e:
             print(f"Error processing frame: {e}")
             return None

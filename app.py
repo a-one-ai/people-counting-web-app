@@ -1,4 +1,4 @@
-# from flask_cors import CORS
+from flask_cors import CORS
 from flask import redirect, url_for
 from flask import Flask, render_template, Response, request, jsonify
 import numpy as np
@@ -139,15 +139,19 @@ def process_received_frame():
         frame_data = request.json['frame']
         ip = request.json['ip']
         gate_name = request.json["gate_name"]
+        
         client_id = ip
 
         if client_id not in camera_count_users:
             camera_count_users[client_id] = camera_count_User(client_id)
 
         user = camera_count_users[client_id]
-        processed_data = user.process_frame(frame_data)
+
         
-        return jsonify({'processed_frame': processed_data})
+        
+        processed_data,up ,down = user.process_frame(frame_data)
+        
+        return jsonify({'processed_frame': processed_data, "up":up , "down":down})
 
 @app.route('/mouse_event', methods=['POST'])
 def handle_mouse_event():
@@ -235,7 +239,7 @@ def upload():
         img_bytes = base64.b64decode(img)
     
         # Send back the processed image data
-        return jsonify({'image_data': encoded_image_data})
+        return jsonify({'image_data': encoded_image_data,"count":count})
 
     except Exception as e:
         error_message = f"Error processing image: {e}"
@@ -288,12 +292,15 @@ def capture_signal():
     data = request.json
     value = data.get('value')
     ip = data.get('ip')
+
     print("the is fjaiojiae",ip)
     if value and ip in url_crowd_users:
-        user_instance = url_crowd_users[ip]
+        user_instance  = url_crowd_users[ip]
+        
         gate_name = request.json["gate_name"]
-        processed_image_data = process_captured_frame(user_instance.cap_frame)
-        return jsonify({'image': processed_image_data})
+        processed_image_data ,count = process_captured_frame(user_instance.cap_frame)
+
+        return jsonify({'image': processed_image_data,"count":count})
 
     return jsonify({'message': 'Invalid request'})
 
@@ -303,7 +310,7 @@ def process_captured_frame(cap_frame):
         count,frame = count_humans(cap_frame)
         _, encoded_image = cv2.imencode('.jpg', frame)
         encoded_image_data = base64.b64encode(encoded_image).decode('utf-8')
-        return encoded_image_data
+        return encoded_image_data ,count
 
     return None
 

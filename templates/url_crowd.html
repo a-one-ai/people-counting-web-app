@@ -98,6 +98,9 @@
         const storageRef = ref(storage, `image_${Date.now()}.jpg`);
 
 
+        
+
+
       var goBackToHome = function () {
         window.location.href = "/";
     };
@@ -109,6 +112,10 @@
 
 
 
+
+   
+
+
       const canvas = document.getElementById("canvas");
       const captureButton = document.getElementById("capture-btn");
       const capturedImageContainer = document.getElementById(
@@ -116,6 +123,8 @@
       );
       const ip = "{{ ip }}";
       var gate_name = "{{gate_name}}";
+       
+
 
       captureButton.addEventListener("click", function () {
         sendCaptureSignal(1, ip);
@@ -131,7 +140,9 @@
         })
           .then((response) => response.json())
           .then(async (data) => {
+           
             if (data.image) {
+              var count = data.count;
               const receivedImageData = data.image;
               const decodedImageData = atob(receivedImageData);
               const imgElement = new Image();
@@ -166,7 +177,9 @@
     
             await addDoc(collection(firestore, gate_name), {
               loginTime: serverTimestamp(),
-              currentscene: imageUrl
+              currentscene: imageUrl,
+              from: gate_name,
+              count: data.count 
               });
           }})
           .catch((error) => {

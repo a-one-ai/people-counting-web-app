@@ -65,6 +65,7 @@
 
 
         const ip = "{{ ip }}";
+
         var gate_name = "{{gateNameInput}}";
         let video = document.createElement('video');
         document.body.appendChild(video);
@@ -81,6 +82,7 @@
         let outputContext = outputCanvas.getContext('2d');
         let sendInterval = 200;
         let stopped = false;
+        
 
         function startStream() {
             startVideo()
@@ -108,6 +110,9 @@
                             .then(response => response.json())
                             .then( async (data) => {
                                 if (data && data.processed_frame) {
+                                    var up = data.up;
+                                    var down = data.down;
+        
                                     let processedImage = new Image();
                                     processedImage.onload = function () {
                                         outputContext.drawImage(processedImage, 0, 0, 640, 480);
@@ -128,11 +133,16 @@
                             
                                     await addDoc(collection(firestore, gate_name), {
                                         loginTime: serverTimestamp(),
-                                        currentscene: imageUrl
+                                        currentscene: imageUrl,
+                                        from: gate_name,
+                                        countIn: up,
+                                        countOut: down,
+                                        total: up-down
+                                        
                                     })
                                 }
                             })
-                        } , 30000);
+                        } , 300000);
                     })};
 
 

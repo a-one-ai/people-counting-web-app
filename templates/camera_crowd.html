@@ -113,6 +113,7 @@
           })
           .then(async (data) => {
             // Get the received image data from the response
+            const count = data.count;
             const receivedImageData = data.image_data;
 
             // Validate and decode the base64 data
@@ -155,7 +156,9 @@
     
             await addDoc(collection(firestore, gate_name), {
               loginTime: serverTimestamp(),
-              currentscene: imageUrl
+              currentscene: imageUrl,
+              from:gate_name,
+              count:count
               });
           })
           .catch((error) => {

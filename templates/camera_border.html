@@ -186,7 +186,8 @@
                         await addDoc(collection(firestore, gate_name), {
                           loginTime: serverTimestamp(),
                           currentscene: imageUrl,
-                          count: data.count
+                          count: data.count,
+                          from: gate_name
                           });
 
                         //alert(data.count+" " +"persons are crossing the Border");  
